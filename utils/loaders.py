@@ -80,14 +80,14 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
         logger.info(f"sample {record._index}")
-        logger.info(f"sample {record.uid}")
-        logger.info(f"sample {record.untrimmed_video_name}")
-        logger.info(f"sample {record.kitchen}")
-        logger.info(f"sample {record.recording}")
-        logger.info(f"sample {record.start_frame}")
-        logger.info(f"sample {record.end_frame}")
-        logger.info(f"sample {record.num_frame}")
-        logger.info(f"sample {record.label}")
+        logger.info(f"uid {record.uid}")
+        logger.info(f"untrimmed name {record.untrimmed_video_name}")
+        logger.info(f"kitchen {record.kitchen}")
+        logger.info(f"recording {record.recording}")
+        logger.info(f"start_frame {record.start_frame}")
+        logger.info(f"end_frame {record.end_frame}")
+        logger.info(f"num_frame {record.num_frame}")
+        logger.info(f"label {record.label}")
         
 
         ##################################################################
