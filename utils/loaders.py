@@ -93,7 +93,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # Remember that the returned array should have size              #
         #           num_clip x num_frames_per_clip                       #
         ##################################################################
-        raise NotImplementedError("You should implement _get_val_indices")
+        #raise NotImplementedError("You should implement _get_val_indices")
 
     def __getitem__(self, index):
 
