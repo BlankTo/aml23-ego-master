@@ -77,6 +77,14 @@ class EpicKitchensDataset(data.Dataset, ABC):
         raise NotImplementedError("You should implement _get_train_indices")
 
     def _get_val_indices(self, record, modality):
+
+        print("_get_val_indices")
+        print("modded version")
+        print(type(record))
+        print(type(modality))
+        print(record)
+        print(modality)
+
         ##################################################################
         # TODO: implement sampling for testing mode                      #
         # Give the record and the modality, this function should return  #
