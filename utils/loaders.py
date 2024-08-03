@@ -90,6 +90,30 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # Remember that the returned array should have size              #
         #           num_clip x num_frames_per_clip                       #
         ##################################################################
+
+        ## here the implementation
+
+        num_frames = self.num_frames_per_clip[modality]
+        num_clips = self.num_clips
+        duration = record.num_frames
+        clip_length = duration // num_clips
+
+        indices = []
+        for clip_idx in range(num_clips):
+
+            clip_center = clip_length * (clip_idx + 0.5)
+            
+            if self.dense_sampling[modality]: # Dense sampling: 
+                pass # TODO
+
+            else: # Uniform sampling:
+                pass #TODO
+
+
+        #return indices
+    
+        #####
+
         raise NotImplementedError("You should implement _get_val_indices")
 
     def __getitem__(self, index):
