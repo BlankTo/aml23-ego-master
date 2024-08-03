@@ -78,12 +78,12 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
     def _get_val_indices(self, record, modality):
 
-        print("_get_val_indices")
-        print("modded version")
-        print(type(record))
-        print(type(modality))
-        print(record)
-        print(modality)
+        logger.info("_get_val_indices")
+        logger.info("modded version")
+        logger.info(type(record))
+        logger.info(type(modality))
+        logger.info(record)
+        logger.info(modality)
 
         ##################################################################
         # TODO: implement sampling for testing mode                      #
@@ -93,7 +93,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # Remember that the returned array should have size              #
         #           num_clip x num_frames_per_clip                       #
         ##################################################################
-        #raise NotImplementedError("You should implement _get_val_indices")
+        raise NotImplementedError("You should implement _get_val_indices")
 
     def __getitem__(self, index):
 
