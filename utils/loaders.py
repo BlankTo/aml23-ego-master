@@ -79,7 +79,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
     def _get_val_indices(self, record, modality):
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frame {record.num_frame}, label {record.label}")
+        logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
         
 
         ##################################################################
