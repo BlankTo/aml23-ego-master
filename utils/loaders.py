@@ -78,12 +78,17 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
     def _get_val_indices(self, record, modality):
 
-        logger.info("_get_val_indices")
-        logger.info("modded version")
-        logger.info(type(record))
-        logger.info(type(modality))
-        logger.info(record)
-        logger.info(modality)
+        logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
+        logger.info(f"sample {record._index}")
+        logger.info(f"sample {record.uid}")
+        logger.info(f"sample {record.untrimmed_video_name}")
+        logger.info(f"sample {record.kitchen}")
+        logger.info(f"sample {record.recording}")
+        logger.info(f"sample {record.start_frame}")
+        logger.info(f"sample {record.end_frame}")
+        logger.info(f"sample {record.num_frame}")
+        logger.info(f"sample {record.label}")
+        
 
         ##################################################################
         # TODO: implement sampling for testing mode                      #
