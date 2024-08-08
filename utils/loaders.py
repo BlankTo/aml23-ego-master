@@ -109,7 +109,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         #raise NotImplementedError("You should implement _get_val_indices")
 
-        clip_starts = [random.randint(9, duration - 9) - 9 for _ in range(num_clips)]
+        clip_starts = [random.randint(9, duration[modality] - 9) - 9 for _ in range(num_clips)]
 
         indices = []
         for clip_start in clip_starts:
@@ -118,13 +118,13 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             if self.dense_sampling[modality]: # Dense sampling:
 
-                starting_dense_idx = random.randint(0, duration - num_frames_per_clip * dense_stride)
+                starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
 
                 for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id + clip_start)
 
             else: # Uniform sampling:
                 
-                for frame_id in range(0, duration, int( duration / num_frames_per_clip )): frames_per_clip.append(frame_id + clip_start)
+                for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): frames_per_clip.append(frame_id + clip_start)
 
             indices.append(frames_per_clip)
 
