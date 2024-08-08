@@ -90,7 +90,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         ## here the implementation
 
-
         num_frames_per_clip = self.num_frames_per_clip[modality]
         num_clips = self.num_clips
         dense_stride = self.stride
@@ -105,7 +104,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
             logger.info(f"num_clips: {num_clips}")
             logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
             logger.info(f"duration: {duration}")
-            logger.info(record)
 
         indices = []
         
@@ -119,6 +117,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
 
+        logger.info("-----------------------------------------------------------------------------------------------------------------")
         if record._index == '1':
             import numpy as np
             logger.info(len(indices))
