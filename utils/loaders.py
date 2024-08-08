@@ -124,6 +124,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         import numpy as np
         logger.info(np.array(indices).shape)
+        logger.info(len(indices))
 
         return indices
 
