@@ -97,7 +97,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         duration = record.num_frames
 
-        if record._index == 0:
+        if record._index == 1:
         
             logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
             logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
@@ -119,7 +119,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(record.start_frame + frame_id)
 
-        if record._index == 0:
+        if record._index == 1:
             import numpy as np
             logger.info(len(indices))
             logger.info(f"sample {record._index} -> {indices}")
