@@ -96,8 +96,8 @@ def save_feat(model, loader, device, it, num_classes):
 
             for m in modalities:
                 batch, _, height, width = data[m].shape
-                data[m] = data[m].reshape(batch, args.save.num_clips,
-                                          args.save.num_frames_per_clip[m], -1, height, width)
+                logger.info(data[m].shape)
+                data[m] = data[m].reshape(batch, args.save.num_clips, args.save.num_frames_per_clip[m], -1, height, width)
                 data[m] = data[m].permute(1, 0, 3, 2, 4, 5)
 
                 logits[m] = torch.zeros((args.save.num_clips, batch, num_classes)).to(device)
