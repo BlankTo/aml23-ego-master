@@ -1,4 +1,5 @@
 import glob
+import random
 from abc import ABC
 import pandas as pd
 from .epic_record import EpicVideoRecord
@@ -79,8 +80,12 @@ class EpicKitchensDataset(data.Dataset, ABC):
     def _get_val_indices(self, record, modality):
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
+        logger.info(f"recording: {type(record.recording)}")
+        logger.info(f"start_frame: {type(record.start_frame)}")
+        logger.info(f"stop_frame: {type(record.stop_frame)}")
+        logger.info(f"num_frame: {type(record.num_frame)}")
+        logger.info(f"label: {type(record.label)}")
         logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-        
 
         ##################################################################
         # TODO: implement sampling for testing mode                      #
@@ -93,28 +98,45 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         ## here the implementation
 
-        num_frames = self.num_frames_per_clip[modality]
+
+        num_frames_per_clip = self.num_frames_per_clip[modality]
         num_clips = self.num_clips
+        dense_stride = self.stride
+
+        print(f"num_frames: {num_frames_per_clip}")
+        print(f"num_clips: {num_clips}")
+
         duration = record.num_frames
-        clip_length = duration // num_clips
+
+        print(f"duration: {duration}")
+
+        print(record)
+
+        #raise NotImplementedError("You should implement _get_val_indices")
 
         indices = []
-        for clip_idx in range(num_clips):
+        for clip_idx in range(num_clips): # this is not correct for now, clip_idx -> record is a clip, a collection of clips or a video? check size
 
-            clip_center = clip_length * (clip_idx + 0.5)
+            frames_per_clip = []
             
             if self.dense_sampling[modality]: # Dense sampling: 
-                pass # TODO
+
+                starting_dense_idx = random.randint(0, duration - num_frames_per_clip * dense_stride)
+
+                for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id)
 
             else: # Uniform sampling:
-                pass #TODO
+                
+                for frame_id in range(0, duration, int( duration / num_frames_per_clip )): pass
+
+            indices.append(frames_per_clip)
 
 
-        #return indices
+        return indices
     
         #####
 
-        raise NotImplementedError("You should implement _get_val_indices")
+        #raise NotImplementedError("You should implement _get_val_indices")
 
     def __getitem__(self, index):
 
