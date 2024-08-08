@@ -80,11 +80,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
     def _get_val_indices(self, record, modality):
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        logger.info(f"recording: {type(record.recording)}")
-        logger.info(f"start_frame: {type(record.start_frame)}")
-        logger.info(f"stop_frame: {type(record.end_frame)}")
-        logger.info(f"num_frame: {type(record.num_frames)}")
-        logger.info(f"label: {type(record.label)}")
         logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
 
         ##################################################################
@@ -103,14 +98,14 @@ class EpicKitchensDataset(data.Dataset, ABC):
         num_clips = self.num_clips
         dense_stride = self.stride
 
-        print(f"num_frames: {num_frames_per_clip}")
-        print(f"num_clips: {num_clips}")
+        logger.info(f"num_frames: {num_frames_per_clip}")
+        logger.info(f"num_clips: {num_clips}")
 
         duration = record.num_frames
 
-        print(f"duration: {duration}")
+        logger.info(f"duration: {duration}")
 
-        print(record)
+        logger.info(record)
 
         #raise NotImplementedError("You should implement _get_val_indices")
 
