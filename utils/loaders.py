@@ -79,9 +79,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
     def _get_val_indices(self, record, modality):
 
-        logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-
         ##################################################################
         # TODO: implement sampling for testing mode                      #
         # Give the record and the modality, this function should return  #
@@ -98,13 +95,17 @@ class EpicKitchensDataset(data.Dataset, ABC):
         num_clips = self.num_clips
         dense_stride = self.stride
 
-        logger.info(f"num_clips: {num_clips}")
-        logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
-
         duration = record.num_frames
 
-        logger.info(f"duration: {duration}")
-        logger.info(record)
+        if record._index == 0:
+        
+            logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
+            logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
+
+            logger.info(f"num_clips: {num_clips}")
+            logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
+            logger.info(f"duration: {duration}")
+            logger.info(record)
 
         indices = []
         
@@ -118,9 +119,10 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(record.start_frame + frame_id)
 
-        import numpy as np
-        logger.info(len(indices))
-        logger.info(f"sample {record.uid} -> {indices}")
+        if record._index == 0:
+            import numpy as np
+            logger.info(len(indices))
+            logger.info(f"sample {record._index} -> {indices}")
 
         return indices
 
