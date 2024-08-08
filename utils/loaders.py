@@ -112,15 +112,15 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
             starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
 
-            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(frame_id + record.start_frame)
+            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(record.start_frame + frame_id)
 
         else: # Uniform sampling:
             
-            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(frame_id + record.start_frame)
+            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(record.start_frame + frame_id)
 
         import numpy as np
-        logger.info(np.array(indices).shape)
         logger.info(len(indices))
+        logger.info(f"sample {record.uid} -> {indices}")
 
         return indices
 
