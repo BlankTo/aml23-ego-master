@@ -212,16 +212,12 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
             idx_untrimmed = record.start_frame + idx
             try:
-                img = Image.open(os.path.join(data_path, record.untrimmed_video_name, tmpl.format(idx_untrimmed))) \
-                    .convert('RGB')
+                img = Image.open(os.path.join(data_path, record.untrimmed_video_name, tmpl.format(idx_untrimmed))).convert('RGB')
             except FileNotFoundError:
                 print("Img not found")
-                max_idx_video = int(sorted(glob.glob(os.path.join(data_path,
-                                                                  record.untrimmed_video_name,
-                                                                  "img_*")))[-1].split("_")[-1].split(".")[0])
+                max_idx_video = int(sorted(glob.glob(os.path.join(data_path, record.untrimmed_video_name, "img_*")))[-1].split("_")[-1].split(".")[0])
                 if idx_untrimmed > max_idx_video:
-                    img = Image.open(os.path.join(data_path, record.untrimmed_video_name, tmpl.format(max_idx_video))) \
-                        .convert('RGB')
+                    img = Image.open(os.path.join(data_path, record.untrimmed_video_name, tmpl.format(max_idx_video))).convert('RGB')
                 else:
                     raise FileNotFoundError
             return [img]
