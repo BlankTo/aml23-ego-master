@@ -101,7 +101,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         
             logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
             logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-            if record._index == 1: logger.info("ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
+            logger.info(f"{type(record._index)} - {record._index}")
             logger.info(f"num_clips: {num_clips}")
             logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
             logger.info(f"duration: {duration}")
