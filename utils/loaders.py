@@ -109,7 +109,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         #raise NotImplementedError("You should implement _get_val_indices")
 
-        clip_starts = [random.randint(9, duration[modality] - 9) - 9 for _ in range(num_clips)]
+        clip_starts = [random.randint(9, duration[modality] - 8) - 8 for _ in range(num_clips)]
 
         indices = []
         for clip_start in clip_starts:
