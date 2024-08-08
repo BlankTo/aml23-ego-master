@@ -129,7 +129,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
             indices.append(frames_per_clip)
 
         import numpy as np
-        print(np.array(indices).shape)
+        logger.info(np.array(indices).shape)
 
         return indices
     
