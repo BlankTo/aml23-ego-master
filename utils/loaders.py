@@ -95,13 +95,13 @@ class EpicKitchensDataset(data.Dataset, ABC):
         num_clips = self.num_clips
         dense_stride = self.stride
 
+        starting_frame = record.start_frame
         duration = record.num_frames
 
-        if True:
+        if record._index == '1':
         
             logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
             logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-            logger.info(f"{type(record._index)} - {record._index}")
             logger.info(f"num_clips: {num_clips}")
             logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
             logger.info(f"duration: {duration}")
@@ -113,13 +113,13 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
             starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
 
-            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(record.start_frame + frame_id)
+            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
 
         else: # Uniform sampling:
             
-            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(record.start_frame + frame_id)
+            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
 
-        if record._index == 1:
+        if record._index == '1':
             import numpy as np
             logger.info(len(indices))
             logger.info(f"sample {record._index} -> {indices}")
