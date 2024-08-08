@@ -117,9 +117,11 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
 
-        import numpy as np
-        logger.info(len(indices))
-        logger.info(f"sample {record._index} -> {indices}")
+        logger.info("-----------------------------------------------------------------------------------------------------------------")
+        if record._index == '1':
+            import numpy as np
+            logger.info(len(indices))
+            logger.info(f"sample {record._index} -> {indices}")
 
         return indices
 
