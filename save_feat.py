@@ -65,8 +65,11 @@ def main():
                                                                  args.save.num_clips, args.save.dense_sampling,
                                                                  augmentations[args.split], additional_info=True,
                                                                  **{"save": args.split}),
-                                             batch_size=1, shuffle=False,
-                                             num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
+                                                                 batch_size=1, shuffle=False,
+                                                                 #num_workers=args.dataset.workers, ####################################################################à
+                                                                 num_workers=1,
+                                                                 pin_memory=True,
+                                                                 drop_last=False)
         save_feat(action_classifier, loader, device, action_classifier.current_iter, num_classes)
     else:
         raise NotImplementedError
