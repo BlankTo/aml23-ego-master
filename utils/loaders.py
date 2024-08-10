@@ -8,6 +8,7 @@ from PIL import Image
 import os
 import os.path
 from utils.logger import logger
+import math
 
 class EpicKitchensDataset(data.Dataset, ABC):
     def __init__(self, split, modalities, mode, dataset_conf, num_frames_per_clip, num_clips, dense_sampling,
@@ -105,7 +106,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         duration = record.num_frames
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
+        logger.info(f"sample {record._index}, uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
 
         ######################################################
 
@@ -126,36 +127,52 @@ class EpicKitchensDataset(data.Dataset, ABC):
     
         #######################################################
 
-        indices = [0 for _ in range(16 * num_clips)]
-        return indices
+        #indices = [0 for _ in range(16 * num_clips)]
+        #return indices
 
         #######################################################
 
-#        clip_starts = [random.randint(0, duration[modality] - 9) for _ in range(num_clips)]
-#
-#        indices = []
-#        for clip_start in clip_starts:
-#
-#            frames_per_clip = []
-#            
-#            if self.dense_sampling[modality]: # Dense sampling:
-#
-#                clip_start = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride - 1)
-#
-#                starting_dense_idx = random.randint(0, (num_frames_per_clip - 1) * dense_stride )
-#
-#                for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id + clip_start)
-#
-#            else: # Uniform sampling:
-#                
-#                for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): frames_per_clip.append(frame_id + clip_start)
-#
-#            indices.append(frames_per_clip)
-#
-#        import numpy as np
-#        logger.info(np.array(indices).shape)
+        indices = []
 
-#        return indices
+        if self.dense_sampling[modality]:
+
+            dense_clip_length = num_frames_per_clip * dense_stride
+
+            for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
+
+                for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
+
+                    indices.append(frame_id)
+                    #indices.append(frame_id + starting_frame)
+
+        else: # Uniform sampling:
+
+            if duration[modality] < 2 *num_frames_per_clip * num_clips:
+
+                for clip_start in range(0, duration[modality] - num_frames_per_clip, math.ceil((duration[modality] - num_frames_per_clip) / num_clips)):
+
+                    for frame_id in range(clip_start, clip_start + num_frames_per_clip):
+
+                        indices.append(frame_id)
+                        #indices.append(frame_id + starting_frame)
+
+            else:
+
+                uniform_clip_length = math.ceil(duration[modality] / num_clips)
+
+                clip_start = 0
+                for _ in range(num_clips):
+
+                    for frame_id in range(clip_start, clip_start + uniform_clip_length, math.ceil(uniform_clip_length / num_frames_per_clip)):
+
+                        indices.append(frame_id)
+                        #indices.append(frame_id + starting_frame)
+
+                    clip_start += uniform_clip_length
+
+        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+
+        return indices
     
         #######################################################
 
