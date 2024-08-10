@@ -59,11 +59,15 @@ def main():
     if args.action == "save":
         augmentations = {"train": train_augmentations, "test": test_augmentations}
         # the only action possible with this script is "save"
-        loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[1], modalities,
-                                                                 args.split, args.dataset,
+        loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[1],
+                                                                 modalities,
+                                                                 args.split,
+                                                                 args.dataset,
                                                                  args.save.num_frames_per_clip,
-                                                                 args.save.num_clips, args.save.dense_sampling,
-                                                                 augmentations[args.split], additional_info=True,
+                                                                 args.save.num_clips,
+                                                                 args.save.dense_sampling,
+                                                                 augmentations[args.split],
+                                                                 additional_info=True,
                                                                  **{"save": args.split}),
                                                                  batch_size=1, shuffle=False,
                                                                  num_workers=args.dataset.workers,
@@ -103,8 +107,7 @@ def save_feat(model, loader, device, it, num_classes):
                 data[m] = data[m].permute(1, 0, 3, 2, 4, 5)
 
                 logits[m] = torch.zeros((args.save.num_clips, batch, num_classes)).to(device)
-                features[m] = torch.zeros((args.save.num_clips, batch, model.task_models[m]
-                                           .module.feat_dim)).to(device)
+                features[m] = torch.zeros((args.save.num_clips, batch, model.task_models[m].module.feat_dim)).to(device)
 
             clip = {}
             for i_c in range(args.save.num_clips):

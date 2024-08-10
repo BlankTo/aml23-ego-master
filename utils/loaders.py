@@ -106,28 +106,30 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
         logger.info(f"sample {record._index},uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-        #logger.info(f"num_clips: {num_clips}")
-        #logger.info(f"num_frames_per_clip: {num_frames_per_clip}")
-        #logger.info(f"duration: {duration}")
 
-        indices = []
-        
-        if self.dense_sampling[modality]: # Dense sampling:
+        ######################################################
 
-            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
-            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
+#        indices = []
+#        
+#        if self.dense_sampling[modality]: # Dense sampling:
+#
+#            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
+#            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
+#
+#        else: # Uniform sampling:
+#            
+#            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
+#
+#        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+#
+#        return indices
+    
+        #######################################################
 
-        else: # Uniform sampling:
-            
-            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
-
-        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
-
+        indices = [[0 for _ in range(16)] for _ in range(num_clips)]
         return indices
 
-        #raise NotImplementedError("You should implement _get_val_indices")
-
-        clip_starts = [random.randint(9, duration[modality] - 8) - 8 for _ in range(num_clips)]
+        clip_starts = [random.randint(0, duration[modality] - 9) for _ in range(num_clips)]
 
         indices = []
         for clip_start in clip_starts:
@@ -136,7 +138,9 @@ class EpicKitchensDataset(data.Dataset, ABC):
             
             if self.dense_sampling[modality]: # Dense sampling:
 
-                starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
+                clip_start = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride - 1)
+
+                starting_dense_idx = random.randint(0, (num_frames_per_clip - 1) * dense_stride )
 
                 for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id + clip_start)
 
