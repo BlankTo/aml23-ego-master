@@ -66,8 +66,7 @@ def main():
                                                                  augmentations[args.split], additional_info=True,
                                                                  **{"save": args.split}),
                                                                  batch_size=1, shuffle=False,
-                                                                 #num_workers=args.dataset.workers, ####################################################################à
-                                                                 num_workers=1,
+                                                                 num_workers=args.dataset.workers,
                                                                  pin_memory=True,
                                                                  drop_last=False)
         save_feat(action_classifier, loader, device, action_classifier.current_iter, num_classes)
