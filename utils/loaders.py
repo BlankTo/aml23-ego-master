@@ -109,53 +109,55 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         ######################################################
 
-#        indices = []
-#        
-#        if self.dense_sampling[modality]: # Dense sampling:
-#
-#            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
-#            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
-#
-#        else: # Uniform sampling:
-#            
-#            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
-#
-#        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
-#
-#        return indices
+        indices = []
+        
+        if self.dense_sampling[modality]: # Dense sampling:
+
+            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
+            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
+
+        else: # Uniform sampling:
+            
+            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
+
+        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+
+        return indices
     
         #######################################################
 
-        indices = [[0 for _ in range(16)] for _ in range(num_clips)]
-        return indices
+        #indices = [[0 for _ in range(16)] for _ in range(num_clips)]
+        #return indices
 
-        clip_starts = [random.randint(0, duration[modality] - 9) for _ in range(num_clips)]
+        #######################################################
 
-        indices = []
-        for clip_start in clip_starts:
+#        clip_starts = [random.randint(0, duration[modality] - 9) for _ in range(num_clips)]
+#
+#        indices = []
+#        for clip_start in clip_starts:
+#
+#            frames_per_clip = []
+#            
+#            if self.dense_sampling[modality]: # Dense sampling:
+#
+#                clip_start = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride - 1)
+#
+#                starting_dense_idx = random.randint(0, (num_frames_per_clip - 1) * dense_stride )
+#
+#                for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id + clip_start)
+#
+#            else: # Uniform sampling:
+#                
+#                for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): frames_per_clip.append(frame_id + clip_start)
+#
+#            indices.append(frames_per_clip)
+#
+#        import numpy as np
+#        logger.info(np.array(indices).shape)
 
-            frames_per_clip = []
-            
-            if self.dense_sampling[modality]: # Dense sampling:
-
-                clip_start = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride - 1)
-
-                starting_dense_idx = random.randint(0, (num_frames_per_clip - 1) * dense_stride )
-
-                for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): frames_per_clip.append(frame_id + clip_start)
-
-            else: # Uniform sampling:
-                
-                for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): frames_per_clip.append(frame_id + clip_start)
-
-            indices.append(frames_per_clip)
-
-        import numpy as np
-        logger.info(np.array(indices).shape)
-
-        return indices
+#        return indices
     
-        #####
+        #######################################################
 
         #raise NotImplementedError("You should implement _get_val_indices")
 
