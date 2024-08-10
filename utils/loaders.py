@@ -109,25 +109,25 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         ######################################################
 
-        indices = []
-        
-        if self.dense_sampling[modality]: # Dense sampling:
-
-            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
-            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
-
-        else: # Uniform sampling:
-            
-            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
-
-        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
-
-        return indices
+#        indices = []
+#        
+#        if self.dense_sampling[modality]: # Dense sampling:
+#
+#            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
+#            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
+#
+#        else: # Uniform sampling:
+#            
+#            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
+#
+#        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+#
+#        return indices
     
         #######################################################
 
-        #indices = [[0 for _ in range(16)] for _ in range(num_clips)]
-        #return indices
+        indices = [0 for _ in range(16 * num_clips)]
+        return indices
 
         #######################################################
 
