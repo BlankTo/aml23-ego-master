@@ -1,5 +1,5 @@
 action: save # train or test
-name: saved_feat_I3D_5
+name: saved_feat_I3D_15
 split: test
 resume_from: ./saved_models/I3D_SourceOnlyD1
 
@@ -8,7 +8,7 @@ save:
   dense_sampling:
     RGB: True
   num_frames_per_clip:
-    RGB: 5
+    RGB: 15
 
 dataset:
   annotations_path: train_val
