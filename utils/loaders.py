@@ -138,6 +138,11 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
             dense_clip_length = num_frames_per_clip * dense_stride
 
+            if duration[modality] < dense_clip_length:
+
+                dense_clip_length = num_frames_per_clip
+                dense_stride = 1
+
             for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
 
                 for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
