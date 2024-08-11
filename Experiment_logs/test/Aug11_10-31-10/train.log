@@ -1,0 +1,5 @@
+Uncaught exception
+Traceback (most recent call last):
+  File "c:\Users\User\Desktop\aml_project\aml23-ego-master\save_feat.py", line 3, in <module>
+    import torch.nn.parallel
+ModuleNotFoundError: No module named 'torch'

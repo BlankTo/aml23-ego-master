@@ -1,5 +1,5 @@
 action: ??? # train or test
-name: ??? # name of the experiment needed for the logs
+name: "15_frames_epic" # name of the experiment needed for the logs
 modality: ["RGB"] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
@@ -29,7 +29,7 @@ test:
 dataset:
   annotations_path: train_val # path for the annotations data
   shift: ??? # shifts of the dataset
-  workers: 1 #4 # number of workers for the dataloader ##################################################################
+  workers: 4 # 4 # number of workers for the dataloader ##################################################################
   stride: 2 # stride in case of dense sampling
   resolution: 224 # input resolution to the model
   RGB:
