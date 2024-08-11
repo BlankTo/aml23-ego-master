@@ -6,3 +6,5 @@ pp.py
 /utils/__pycache__
 /tasks/__pycache__
 /models/__pycache__
+/ek_data
+/saved_models

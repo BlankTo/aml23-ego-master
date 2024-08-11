@@ -70,7 +70,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         logger.info('-------------------------------------------------------------------------------')
         
         for name, value in {attr: getattr(self, attr) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}.items():
-            print(f"{name}: {value}")
+            logger.info(f"{name}: {value}")
 
         logger.info('-------------------------------------------------------------------------------')
 
