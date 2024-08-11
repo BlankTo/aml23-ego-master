@@ -69,7 +69,8 @@ def main():
                                                                  augmentations[args.split],
                                                                  additional_info=True,
                                                                  **{"save": args.split}),
-                                                                 batch_size=1, shuffle=False,
+                                                                 batch_size=1,
+                                                                 shuffle=False,
                                                                  num_workers=args.dataset.workers,
                                                                  pin_memory=True,
                                                                  drop_last=False)
