@@ -8,3 +8,5 @@ pp.py
 /models/__pycache__
 /ek_data
 /saved_models
+/saved_features
+/clustering_results
