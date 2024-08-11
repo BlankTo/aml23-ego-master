@@ -143,16 +143,28 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 dense_clip_length = num_frames_per_clip
                 dense_stride = 1
 
-            for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
+            clip_start = 0
+            for _ in range(num_clips):
 
-                for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
+                frame_id = clip_start
+
+                for _ in range(num_frames_per_clip):
 
                     indices.append(frame_id)
                     #indices.append(frame_id + starting_frame)
 
+                    frame_id += dense_stride
+
+                clip_start += dense_clip_length
+
+            #for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
+                #for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
+                    #indices.append(frame_id)
+                    #indices.append(frame_id + starting_frame)
+
         else: # Uniform sampling:
 
-            if duration[modality] < 2 *num_frames_per_clip * num_clips:
+            if duration[modality] < 2 * num_frames_per_clip * num_clips:
 
                 for clip_start in range(0, duration[modality] - num_frames_per_clip, math.ceil((duration[modality] - num_frames_per_clip) / num_clips)):
 
@@ -163,15 +175,21 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
             else:
 
-                uniform_clip_length = math.ceil(duration[modality] / num_clips)
+                uniform_clip_length = math.floor(duration[modality] / num_clips)
 
                 clip_start = 0
                 for _ in range(num_clips):
 
-                    for frame_id in range(clip_start, clip_start + uniform_clip_length, math.ceil(uniform_clip_length / num_frames_per_clip)):
+                    frame_id = clip_start
+
+                    uniform_stride = math.floor(uniform_clip_length / num_frames_per_clip)
+
+                    for _ in range(num_frames_per_clip):
 
                         indices.append(frame_id)
                         #indices.append(frame_id + starting_frame)
+
+                        frame_id += uniform_stride
 
                     clip_start += uniform_clip_length
 
