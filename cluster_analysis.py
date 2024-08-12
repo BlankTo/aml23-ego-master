@@ -313,21 +313,17 @@ for k in [32]: # 32
         
         cluster_labels = method.fit_predict(features_scaled)
         
-        # Loop over visualization methods
         for vis_name, vis_method in visualization_methods.items():
 
             if vis_name == 'LDA':
-                # Apply LDA
                 if len(set(cluster_labels)) == 1: continue
                 vis_method = vis_method.fit(features_scaled, cluster_labels)
                 components = vis_method.transform(features_scaled)
             else:
-                # Apply PCA or t-SNE
                 components = vis_method.fit_transform(features_scaled)
             
             plt.figure(figsize=(10, 6))
             
-            # Plot based on clustering method
             plt.scatter(components[:, 0], components[:, 1], c=cluster_labels, cmap='viridis')
             plt.title(f'{method_name} with {vis_name}')
             
