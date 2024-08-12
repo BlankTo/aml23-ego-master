@@ -22,7 +22,6 @@ def add_paths():
         path_conf.models_dir = "/data/mirco/CVPR_AffordanceDA/"
     return path_conf
 
-
 # Retrieve the configs path
 conf_path = os.path.join(os.path.dirname(__file__), '../configs')
 
@@ -39,6 +38,11 @@ if 'config' in cli_args and cli_args.config:
 else:
     conf_args = OmegaConf.load(os.path.join(conf_path, "debug.yaml"))
     args = OmegaConf.merge(args, conf_args)
+
+if cli_args["n_frame"]:
+    args.save.num_frames_per_clip = {"RGB": cli_args["n_frame"]}
+if args.name == "placeholder":
+    args.name = f"{args.save.num_frames_per_clip['RGB']}_frame"
 
 path_args = add_paths()
 args = OmegaConf.merge(args, path_args)

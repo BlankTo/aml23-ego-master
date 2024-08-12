@@ -105,8 +105,8 @@ class EpicKitchensDataset(data.Dataset, ABC):
         starting_frame = record.start_frame
         duration = record.num_frames
 
-        logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        logger.info(f"sample {record._index}, uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
+        #logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
+        #logger.info(f"sample {record._index}, uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
 
         ######################################################
 
@@ -151,7 +151,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 for _ in range(num_frames_per_clip):
 
                     indices.append(frame_id)
-                    #indices.append(frame_id + starting_frame)
 
                     frame_id += dense_stride
 
@@ -160,7 +159,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
             #for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
                 #for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
                     #indices.append(frame_id)
-                    #indices.append(frame_id + starting_frame)
 
         else: # Uniform sampling:
 
@@ -171,7 +169,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
                     for frame_id in range(clip_start, clip_start + num_frames_per_clip):
 
                         indices.append(frame_id)
-                        #indices.append(frame_id + starting_frame)
 
             else:
 
@@ -187,13 +184,12 @@ class EpicKitchensDataset(data.Dataset, ABC):
                     for _ in range(num_frames_per_clip):
 
                         indices.append(frame_id)
-                        #indices.append(frame_id + starting_frame)
 
                         frame_id += uniform_stride
 
                     clip_start += uniform_clip_length
 
-        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+        #logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
 
         return indices
     
@@ -225,7 +221,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # notice that all indexes are sampled in the[0, sample_{num_frames}] range, then the start_index of the sample
         # is added as an offset
         for modality in self.modalities:
-            logger.info(f'MODALITY: {modality}')
+            #logger.info(f'MODALITY: {modality}')
             if self.mode == "train":
                 # here the training indexes are obtained with some randomization
                 segment_indices[modality] = self._get_train_indices(record, modality)

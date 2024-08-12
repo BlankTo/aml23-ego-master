@@ -103,7 +103,7 @@ def save_feat(model, loader, device, it, num_classes):
 
             for m in modalities:
                 batch, _, height, width = data[m].shape
-                logger.info(data[m].shape)
+                #logger.info(data[m].shape)
                 data[m] = data[m].reshape(batch, args.save.num_clips, args.save.num_frames_per_clip[m], -1, height, width)
                 data[m] = data[m].permute(1, 0, 3, 2, 4, 5)
 
@@ -139,7 +139,7 @@ def save_feat(model, loader, device, it, num_classes):
         pickle.dump(results_dict, open(os.path.join("saved_features", args.name + "_" +
                                                     args.dataset.shift.split("-")[1] + "_" +
                                                     args.split + ".pkl"), 'wb'))
-        logger.info(f"features dumped shape: ({len(results_dict['features'])}, {len(results_dict["features"][0])})")
+        logger.info(f"features dumped with shape: ({len(results_dict['features'])}, {len(results_dict['features'][0])})")
 
         class_accuracies = [(x / y) * 100 for x, y in zip(model.accuracy.correct, model.accuracy.total)]
         logger.info('Final accuracy: top1 = %.2f%%\ttop5 = %.2f%%' % (model.accuracy.avg[1],
