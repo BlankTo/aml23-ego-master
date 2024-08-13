@@ -13,9 +13,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.manifold import TSNE
 from sklearn.mixture import GaussianMixture
 from minisom import MiniSom
-import torch
 
-def analyze_clusters(name, k_range=[32]):
+def analyze_clusters(name, k_range=[32], name_addon=''):
 
     #import threadpoolctl
     #print(threadpoolctl.threadpool_info())
@@ -24,6 +23,8 @@ def analyze_clusters(name, k_range=[32]):
 
     with open("saved_features//" + name + "_D1_test.pkl", 'rb') as f:
         saved_features = pickle.load(f)
+
+    name = name + '_' + name_addon
 
     with open("train_val//D1_test.pkl", 'rb') as f:
         train_val = pickle.load(f)
@@ -42,30 +43,39 @@ def analyze_clusters(name, k_range=[32]):
     clips_verb = []
     clips_obj = []
     for feat in features:
-        print('---------------------------------')
-        print(f"video_name: {feat['video_name']}")
-        print(f"uid: {feat['uid']}")
+        #print('---------------------------------')
+        #print(f"video_name: {feat['video_name']}")
+        #print(f"uid: {feat['uid']}")
         label = labels[feat['uid']]
-        print(f"narration: {label['narration']}")
-        print(f"verb: {label['verb']}")
-        print(f"verb_class: {label['verb_class']}")
-        print(f"n_clip: {len(feat['features_RGB'])}")
-        print(f"n_something_per_clip: {len(feat['features_RGB'][0])}")
+        #print(f"narration: {label['narration']}")
+        #print(f"verb: {label['verb']}")
+        #print(f"verb_class: {label['verb_class']}")
+        #print(f"n_clip: {len(feat['features_RGB'])}")
+        #print(f"n_something_per_clip: {len(feat['features_RGB'][0])}")
 
-        for clip in feat['features_RGB']:
-            clips_features.append(clip)
-            clips_label.append(label)
-            clips_narration.append(label['narration'])
-            clips_verb.append(label['verb'])
-            clips_obj.append(label['narration'].split(' ')[-1])
+#        for clip in feat['features_RGB']:
+#            clips_features.append(clip)
+#            clips_label.append(label)
+#            clips_narration.append(label['narration'])
+#            clips_verb.append(label['verb'])
+#            clips_obj.append(label['narration'].split(' ')[-1])
 
-    for feat, label, verb, obj in zip(clips_features, clips_label, clips_verb, clips_obj):
+        clip = feat['features_RGB'][2]
+        clips_features.append(clip)
+        clips_label.append(label)
+        clips_narration.append(label['narration'])
+        clips_verb.append(label['verb'])
+        clips_obj.append(label['narration'].split(' ')[-1])
 
-        print('------------------------------')
-        print(label)
-        print(verb)
-        print(obj)
-        print(len(feat))
+    if False:
+
+        for feat, label, verb, obj in zip(clips_features, clips_label, clips_verb, clips_obj):
+
+            print('------------------------------')
+            print(label)
+            print(verb)
+            print(obj)
+            print(len(feat))
 
     clips_features = np.array(clips_features)
     print(clips_features.shape)
@@ -76,219 +86,225 @@ def analyze_clusters(name, k_range=[32]):
 
     ## elbow method
 
-    #inertia = []
-    #k_values = range(1, 100)
-    #for k in k_values:
-    #    kmeans = KMeans(n_clusters=k, random_state=42)
-    #    kmeans.fit(features_scaled)
-    #    inertia.append(kmeans.inertia_)
-    #
-    #plt.plot(k_values, inertia, 'bx-')
-    #plt.xlabel('Number of clusters (k)')
-    #plt.ylabel('Inertia')
-    #plt.title('Elbow Method For Optimal k')
-    #plt.show()
+    if False:
+
+        inertia = []
+        k_values = range(1, 100)
+        for k in k_values:
+            kmeans = KMeans(n_clusters=k, random_state=42)
+            kmeans.fit(features_scaled)
+            inertia.append(kmeans.inertia_)
+        
+        plt.plot(k_values, inertia, 'bx-')
+        plt.xlabel('Number of clusters (k)')
+        plt.ylabel('Inertia')
+        plt.title('Elbow Method For Optimal k')
+        plt.show()
 
     ## silhouette score
 
-    #silhouette_scores = []
-    #for k in range(2, 100):
-    #    kmeans = KMeans(n_clusters=k, random_state=42)
-    #    labels = kmeans.fit_predict(features_scaled)
-    #    score = silhouette_score(features_scaled, labels)
-    #    silhouette_scores.append(score)
-    #
-    #plt.plot(range(2, 100), silhouette_scores, 'bx-')
-    #plt.xlabel('Number of clusters (k)')
-    #plt.ylabel('Silhouette Score')
-    #plt.title('Silhouette Method For Optimal k')
-    #plt.show()
+    if False:
+
+        silhouette_scores = []
+        for k in range(2, 100):
+            kmeans = KMeans(n_clusters=k, random_state=42)
+            labels = kmeans.fit_predict(features_scaled)
+            score = silhouette_score(features_scaled, labels)
+            silhouette_scores.append(score)
+        
+        plt.plot(range(2, 100), silhouette_scores, 'bx-')
+        plt.xlabel('Number of clusters (k)')
+        plt.ylabel('Silhouette Score')
+        plt.title('Silhouette Method For Optimal k')
+        plt.show()
 
     ## clustering
 
     for k in k_range: # 32 from partial elbow and silhouette analysis
 
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        cluster_labels = kmeans.fit_predict(features_scaled)
-
-        ## analysis
-
         if False:
 
-            df = pd.DataFrame({
-                'Narration': clips_narration,
-                'Cluster': cluster_labels
-            })
+            kmeans = KMeans(n_clusters=k, random_state=42)
+            cluster_labels = kmeans.fit_predict(features_scaled)
 
-            print(df['Cluster'].value_counts())
+            ## analysis
 
-            for i in range(k):
-                print(f"\nCluster {i}:")
-                print(set(df[df['Cluster'] == i]['Narration'].values))
+            if False:
 
-        ## PCA
+                df = pd.DataFrame({
+                    'Narration': clips_narration,
+                    'Cluster': cluster_labels
+                })
 
-        if False:
+                print(df['Cluster'].value_counts())
 
-            pca = PCA(n_components=2)
-            principal_components = pca.fit_transform(features_scaled)
+                for i in range(k):
+                    print(f"\nCluster {i}:")
+                    print(set(df[df['Cluster'] == i]['Narration'].values))
 
-            plt.scatter(principal_components[:, 0], principal_components[:, 1], c=cluster_labels, cmap='viridis')
-            plt.xlabel('PCA 1')
-            plt.ylabel('PCA 2')
-            plt.title('PCA Visualization of Clusters')
-            plt.show()
+            ## PCA
 
-        ## LDA
+            if False:
 
-        if False:
+                pca = PCA(n_components=2)
+                principal_components = pca.fit_transform(features_scaled)
 
-            lda = LinearDiscriminantAnalysis(n_components=2)
-            lda_components = lda.fit_transform(features_scaled, cluster_labels)
+                plt.scatter(principal_components[:, 0], principal_components[:, 1], c=cluster_labels, cmap='viridis')
+                plt.xlabel('PCA 1')
+                plt.ylabel('PCA 2')
+                plt.title('PCA Visualization of Clusters')
+                plt.show()
 
-            colors = sns.color_palette("hsv", k)
+            ## LDA
 
-            plt.figure(figsize=(10, 6))
+            if False:
 
-            for cluster in range(k):
-                plt.scatter(
-                    lda_components[cluster_labels == cluster, 0],
-                    lda_components[cluster_labels == cluster, 1],
-                    color=colors[cluster], label=f'Cluster {cluster}', alpha=0.6
-                )
+                lda = LinearDiscriminantAnalysis(n_components=2)
+                lda_components = lda.fit_transform(features_scaled, cluster_labels)
 
-            plt.xlabel('LDA Component 1')
-            plt.ylabel('LDA Component 2')
-            plt.title('LDA Scatter Plot of Clusters')
-            plt.legend()
-            plt.show()
+                colors = sns.color_palette("hsv", k)
 
+                plt.figure(figsize=(10, 6))
 
-        ## t-SNE
+                for cluster in range(k):
+                    plt.scatter(
+                        lda_components[cluster_labels == cluster, 0],
+                        lda_components[cluster_labels == cluster, 1],
+                        color=colors[cluster], label=f'Cluster {cluster}', alpha=0.6
+                    )
 
-        if False:
-            tsne = TSNE(n_components=2, random_state=42)
-            tsne_results = tsne.fit_transform(features_scaled)
-
-            plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=cluster_labels, cmap='viridis')
-            plt.xlabel('t-SNE 1')
-            plt.ylabel('t-SNE 2')
-            plt.title('t-SNE Visualization of Clusters')
-            plt.show()
-
-        ## agglomerative clustering
-
-        if False:
-            agg_clustering = AgglomerativeClustering(n_clusters=5)
-            cluster_labels = agg_clustering.fit_predict(features_scaled)
-
-            linked = linkage(features_scaled, method='ward')
-            plt.figure(figsize=(10, 7))
-            dendrogram(linked)
-            plt.title('Dendrogram for Hierarchical Clustering')
-            plt.show()
-
-        ## DBSCAN
-
-        if False:
-
-            dbscan = DBSCAN(eps=0.5, min_samples=1)
-            cluster_labels = dbscan.fit_predict(features_scaled)
-
-            plt.figure(figsize=(10, 6))
-            plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
-            plt.title('DBSCAN Clustering')
-            plt.xlabel('Feature 1')
-            plt.ylabel('Feature 2')
-            plt.show()
+                plt.xlabel('LDA Component 1')
+                plt.ylabel('LDA Component 2')
+                plt.title('LDA Scatter Plot of Clusters')
+                plt.legend()
+                plt.show()
 
 
-        ## GMM
+            ## t-SNE
 
-        if False:
+            if False:
+                tsne = TSNE(n_components=2, random_state=42)
+                tsne_results = tsne.fit_transform(features_scaled)
 
-            gmm = GaussianMixture(n_components=32, random_state=42)
-            cluster_labels = gmm.fit_predict(features_scaled)
+                plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=cluster_labels, cmap='viridis')
+                plt.xlabel('t-SNE 1')
+                plt.ylabel('t-SNE 2')
+                plt.title('t-SNE Visualization of Clusters')
+                plt.show()
 
-            lda = LinearDiscriminantAnalysis(n_components=2)
-            lda_components = lda.fit_transform(features_scaled, cluster_labels)
+            ## agglomerative clustering
 
-            plt.figure(figsize=(10, 6))
-            plt.scatter(lda_components[:, 0], lda_components[:, 1], c=cluster_labels, cmap='viridis', alpha= 0.7)
-            plt.title('Gaussian Mixture Model Clustering')
-            plt.xlabel('LDA Component 1')
-            plt.ylabel('LDA Component 2')
-            plt.show()
+            if False:
+                agg_clustering = AgglomerativeClustering(n_clusters=5)
+                cluster_labels = agg_clustering.fit_predict(features_scaled)
 
-        ## spectral clustering
+                linked = linkage(features_scaled, method='ward')
+                plt.figure(figsize=(10, 7))
+                dendrogram(linked)
+                plt.title('Dendrogram for Hierarchical Clustering')
+                plt.show()
 
-        if False:
+            ## DBSCAN
 
-            spectral = SpectralClustering(n_clusters=32, affinity='nearest_neighbors', random_state=42)
-            cluster_labels = spectral.fit_predict(features_scaled)
+            if False:
 
-            plt.figure(figsize=(10, 6))
-            plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha= 0.7)
-            plt.title('Spectral Clustering')
-            plt.xlabel('Feature 1')
-            plt.ylabel('Feature 2')
-            plt.show()
+                dbscan = DBSCAN(eps=0.5, min_samples=1)
+                cluster_labels = dbscan.fit_predict(features_scaled)
 
-        ## mean shift clustering 
+                plt.figure(figsize=(10, 6))
+                plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
+                plt.title('DBSCAN Clustering')
+                plt.xlabel('Feature 1')
+                plt.ylabel('Feature 2')
+                plt.show()
 
-        if False:
 
-            mean_shift = MeanShift()
-            cluster_labels = mean_shift.fit_predict(features_scaled)
+            ## GMM
 
-            plt.figure(figsize=(10, 6))
-            plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
-            plt.title('Mean Shift Clustering')
-            plt.xlabel('Feature 1')
-            plt.ylabel('Feature 2')
-            plt.show()
+            if False:
 
-        ## affinity propagation
+                gmm = GaussianMixture(n_components=32, random_state=42)
+                cluster_labels = gmm.fit_predict(features_scaled)
 
-        if False:
+                lda = LinearDiscriminantAnalysis(n_components=2)
+                lda_components = lda.fit_transform(features_scaled, cluster_labels)
 
-            affinity_prop = AffinityPropagation(random_state=42)
-            cluster_labels = affinity_prop.fit_predict(features_scaled)
+                plt.figure(figsize=(10, 6))
+                plt.scatter(lda_components[:, 0], lda_components[:, 1], c=cluster_labels, cmap='viridis', alpha= 0.7)
+                plt.title('Gaussian Mixture Model Clustering')
+                plt.xlabel('LDA Component 1')
+                plt.ylabel('LDA Component 2')
+                plt.show()
 
-            plt.figure(figsize=(10, 6))
-            plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
-            plt.title('Affinity Propagation Clustering')
-            plt.xlabel('Feature 1')
-            plt.ylabel('Feature 2')
-            plt.show()
+            ## spectral clustering
 
-        ## SOM
+            if False:
 
-        if False:
+                spectral = SpectralClustering(n_clusters=32, affinity='nearest_neighbors', random_state=42)
+                cluster_labels = spectral.fit_predict(features_scaled)
 
-            som = MiniSom(x=50, y=50, input_len=features_scaled.shape[1], sigma=1.0, learning_rate=0.5)
-            som.random_weights_init(features_scaled)
-            som.train_random(features_scaled, num_iteration=100)
+                plt.figure(figsize=(10, 6))
+                plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha= 0.7)
+                plt.title('Spectral Clustering')
+                plt.xlabel('Feature 1')
+                plt.ylabel('Feature 2')
+                plt.show()
 
-            # Map data points to their BMU (Best Matching Unit) on the SOM grid
-            bmu_indices = np.array([som.winner(x) for x in features_scaled])
+            ## mean shift clustering 
 
-            # Assign unique color to each BMU
-            unique_bmu_indices = np.unique(bmu_indices, axis=0)
-            colors = plt.cm.get_cmap('viridis', len(unique_bmu_indices))
+            if False:
 
-            # Plotting the data points with their corresponding BMU colors
-            plt.figure(figsize=(10, 6))
+                mean_shift = MeanShift()
+                cluster_labels = mean_shift.fit_predict(features_scaled)
 
-            for i, bmu in enumerate(unique_bmu_indices):
-                mask = np.all(bmu_indices == bmu, axis=1)
-                plt.scatter(bmu_indices[mask, 0], bmu_indices[mask, 1], c=[colors(i)], label=f'Cluster {i}')
+                plt.figure(figsize=(10, 6))
+                plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
+                plt.title('Mean Shift Clustering')
+                plt.xlabel('Feature 1')
+                plt.ylabel('Feature 2')
+                plt.show()
 
-            plt.title('Self-Organizing Map Clustering')
-            plt.xlabel('SOM X')
-            plt.ylabel('SOM Y')
-            plt.legend()
-            plt.show()
+            ## affinity propagation
+
+            if False:
+
+                affinity_prop = AffinityPropagation(random_state=42)
+                cluster_labels = affinity_prop.fit_predict(features_scaled)
+
+                plt.figure(figsize=(10, 6))
+                plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
+                plt.title('Affinity Propagation Clustering')
+                plt.xlabel('Feature 1')
+                plt.ylabel('Feature 2')
+                plt.show()
+
+            ## SOM
+
+            if False:
+
+                som = MiniSom(x=50, y=50, input_len=features_scaled.shape[1], sigma=1.0, learning_rate=0.5)
+                som.random_weights_init(features_scaled)
+                som.train_random(features_scaled, num_iteration=100)
+
+                # Map data points to their BMU (Best Matching Unit) on the SOM grid
+                bmu_indices = np.array([som.winner(x) for x in features_scaled])
+
+                # Assign unique color to each BMU
+                unique_bmu_indices = np.unique(bmu_indices, axis=0)
+                colors = plt.cm.get_cmap('viridis', len(unique_bmu_indices))
+
+                # Plotting the data points with their corresponding BMU colors
+                plt.figure(figsize=(10, 6))
+
+                for i, bmu in enumerate(unique_bmu_indices):
+                    mask = np.all(bmu_indices == bmu, axis=1)
+                    plt.scatter(bmu_indices[mask, 0], bmu_indices[mask, 1], c=[colors(i)], label=f'Cluster {i}')
+
+                plt.title('Self-Organizing Map Clustering')
+                plt.xlabel('SOM X')
+                plt.ylabel('SOM Y')
+                plt.legend()
+                plt.show()
 
         ##
 
@@ -314,6 +330,54 @@ def analyze_clusters(name, k_range=[32]):
         for method_name, method in clustering_methods.items():
             
             cluster_labels = method.fit_predict(features_scaled)
+
+            ##
+
+            if True:
+
+                clusters = [([], []) for i_k in range(k)]
+
+                for i in range(len(cluster_labels)):
+
+                    cl = cluster_labels[i]
+                    v = clips_verb[i]
+                    if v in clusters[cl][0]: clusters[cl][1][clusters[cl][0].index(v)] += 1
+                    else:
+                        clusters[cl][0].append(v)
+                        clusters[cl][1].append(1)
+
+                for i_k in range(k):
+
+                    plt.bar(clusters[i_k][0], clusters[i_k][1])
+
+                    plt.title(f'Bar Graph cluster {i_k}')
+                    plt.xlabel('Verbs')
+                    plt.ylabel('Times in cluster')
+
+                    plt.show()
+
+            if True:
+            
+                setv = list(set(clips_verb))
+                lenv = len(setv)
+                verbs = [([i_k for i_k in range(k)], [0 for i_k in range(k)]) for i_v in range(lenv)]
+
+                for i in range(len(cluster_labels)):
+
+                    v = clips_verb[i]
+                    i_v = setv.index(v)
+                    cl = cluster_labels[i]
+                    verbs[i_v][1][cl] += 1
+
+                for i_v in range(lenv):
+
+                    plt.bar(verbs[i_v][0], verbs[i_v][1])
+
+                    plt.title(f'Bar Graph verb {setv[i_v]}')
+                    plt.xlabel('Clusters')
+                    plt.ylabel('Times verb in cluster')
+
+                    plt.show()
             
             for vis_name, vis_method in visualization_methods.items():
 
