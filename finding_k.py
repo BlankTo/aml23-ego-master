@@ -1,196 +1,175 @@
-import numpy as np
-import os
-import pickle
-import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.cluster.hierarchy import dendrogram, linkage
-from sklearn.cluster import KMeans, DBSCAN, SpectralClustering, MeanShift, AffinityPropagation, AgglomerativeClustering
-from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
+from load_feat import load_features, scale_features
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.manifold import TSNE
-from sklearn.mixture import GaussianMixture
-from minisom import MiniSom
-from scipy.spatial.distance import cdist
-from gap_statistic import gap_statistic, plot_gap_statistic
-from sklearn.cluster import OPTICS
 
-def elbow_analysys(name, name_addon=''):
+def find_k(features_scaled):
 
-    os.environ['LOKY_MAX_CPU_COUNT'] = '4'
-
-    with open("saved_features//" + name + "_D1_test.pkl", 'rb') as f:
-        saved_features = pickle.load(f)
-
-    name = name + '_' + name_addon
-
-    features = saved_features['features']
-
-    clips_features = []
-    for feat in features:
-        clip = feat['features_RGB'][2]
-        clips_features.append(clip)
-
-    clips_features = np.array(clips_features)
-    print(clips_features.shape)
-
-    scaler = StandardScaler()
-    features_scaled = scaler.fit_transform(clips_features)
-
-    # OPTICS Clustering
-    optics_model = OPTICS(min_samples=2)
-    optics_model.fit(features_scaled)
-    labels = optics_model.labels_
-
-    # Plot results
-    plt.scatter(features_scaled[:, 0], features_scaled[:, 1], c=labels, cmap='viridis', marker='o', alpha=0.7)
-    plt.title('OPTICS Clustering')
-    plt.show()
-
-    exit()
-
-    # k-mean
-
-    ## elbow method k-mean
+    max_k = 30
 
     inertia = []
-    k_values = range(1, 20)
+    silhouette_scores = []
+    k_values = range(1, max_k)
     for k in k_values:
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        kmeans.fit(features_scaled)
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(features_scaled)
         inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(features_scaled, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
     
-    plt.plot(k_values, inertia, 'bx-')
-    plt.xlabel('Number of clusters (k)')
-    plt.ylabel('Inertia')
-    plt.title('k-mean Elbow Method')
-    plt.show()
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method')
 
-    ## silhouette method k-mean
-
-    silhouette_scores = []
-    K = range(2, 30)
-
-    for k in K:
-        model = KMeans(n_clusters=k, random_state=42)
-        labels = model.fit_predict(features_scaled)
-        silhouette_scores.append(silhouette_score(features_scaled, labels))
-
-    plt.plot(K, silhouette_scores, 'bx-')
-    plt.xlabel('Number of clusters (k)')
-    plt.ylabel('Silhouette Score')
-    plt.title('k-mean Silhouette Analysis')
-    plt.show()
-
-    ## gap method k-mean
-
-    def kmeans_clustering(X, k):
-        model = KMeans(n_clusters=k, random_state=42)
-        labels = model.fit_predict(X)
-        return labels
-
-    model = KMeans(n_clusters=k, random_state=42)
-    gaps_kmeans = gap_statistic(features_scaled, kmeans_clustering, max_k=10, B=10)
-
-    plot_gap_statistic(gaps_kmeans, max_k=10, text="k-means ")
-
-    ## agglomerative
-
-    ## elbow method agglomerative
-
-    def calculate_distortion(X, labels):
-        centroids = np.array([X[labels == i].mean(axis=0) for i in np.unique(labels)])
-        distances = cdist(X, centroids, 'euclidean')
-        return np.sum(np.min(distances, axis=1))
-
-    distortions = []
-    K = range(1, 20)
-
-    for k in K:
-        model = AgglomerativeClustering(n_clusters=k)
-        labels = model.fit_predict(features_scaled)
-        distortions.append(calculate_distortion(features_scaled, labels))
-
-    plt.figure(figsize=(8, 5))
-    plt.plot(K, distortions, 'bx-')
-    plt.xlabel('Number of clusters (k)')
-    plt.ylabel('Distortion')
-    plt.title('Agglomerative Clustering Elbow Method')
-    plt.show()
-
-    ## silhouette method agglomerative
-
-    silhouette_scores = []
-    K = range(2, 30)
-
-    for k in K:
-        agglo = AgglomerativeClustering(n_clusters=k)
-        labels = agglo.fit_predict(features_scaled)
-        silhouette_scores.append(silhouette_score(features_scaled, labels))
-
-    plt.plot(K, silhouette_scores, 'bx-')
-    plt.xlabel('Number of clusters (k)')
-    plt.ylabel('Silhouette Score')
-    plt.title('Agglomerative Clustering Silhouette Analysis')
-    plt.show()
-
-    ## gap method agglomerative
-
-    def agglomerative_clustering(X, k):
-        model = AgglomerativeClustering(n_clusters=k)
-        labels = model.fit_predict(X)
-        return labels
-    
-    gaps_agglomerative = gap_statistic(features_scaled, agglomerative_clustering, max_k=10, B=10)
-
-    plot_gap_statistic(gaps_agglomerative, max_k=10, text="agglomerative ")
-
-    # GMM
-
-    ## elbow method GMM
-
-    bic = []
-    K = range(1, 20)
-    for k in K:
-        gmm = GaussianMixture(n_components=k, random_state=42).fit(features_scaled)
-        bic.append(gmm.bic(features_scaled))
-
-    plt.plot(K, bic, 'bx-')
-    plt.xlabel('Number of components (k)')
-    plt.ylabel('BIC')
-    plt.title('GMM Elbow Method')
-    plt.show()
-
-    ## silhouette method GMM
-
-    silhouette_scores = []
-    K = range(2, 30)
-
-    for k in K:
-        gmm = GaussianMixture(n_components=k, random_state=42)
-        labels = gmm.fit_predict(features_scaled)
-        silhouette_scores.append(silhouette_score(features_scaled, labels))
-
-    plt.plot(K, silhouette_scores, 'bx-')
-    plt.xlabel('Number of clusters (k)')
-    plt.ylabel('Silhouette Score')
-    plt.title('Silhouette Analysis for Gaussian Mixture Models')
-    plt.show()
-
-    ## gap method GMM
-
-    def gmm_clustering(X, k):
-        model = GaussianMixture(n_components=k, random_state=42)
-        labels = model.fit_predict(X)
-        return labels
-
-    gaps_gmm = gap_statistic(features_scaled, gmm_clustering, max_k=10, B=10)
-
-    plot_gap_statistic(gaps_gmm, max_k=10, text='GMM ')
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis')
 
     ##
 
+    pca = PCA(n_components= 400)
+    components = pca.fit_transform(features_scaled)
+
+    inertia = []
+    silhouette_scores = []
+    k_values = range(1, max_k)
+    for k in k_values:
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(components)
+        inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(components, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
+    
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method PCA 400')
+
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis PCA 400')
+
+    ##
+
+    pca = PCA(n_components= 2)
+    components = pca.fit_transform(features_scaled)
+
+    inertia = []
+    silhouette_scores = []
+    k_values = range(1, max_k)
+    for k in k_values:
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(components)
+        inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(components, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
+    
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method PCA 2')
+
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis PCA 2')
+
+    ##
+
+    lda = LinearDiscriminantAnalysis(n_components= 2)
+    components = lda.fit_transform(features_scaled, labels)
+
+    inertia = []
+    silhouette_scores = []
+    k_values = range(1, max_k)
+    for k in k_values:
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(components)
+        inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(components, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
+    
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method LDA 2')
+
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis LDA 2')
+
+    ##
+
+    lda = LinearDiscriminantAnalysis(n_components= 17)
+    components = lda.fit_transform(features_scaled, labels)
+
+    inertia = []
+    silhouette_scores = []
+    k_values = range(1, max_k)
+    for k in k_values:
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(components)
+        inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(components, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
+    
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method LDA 17')
+
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis LDA 17')
+
+    ##
+
+    pca = PCA(n_components= 400)
+    components = pca.fit_transform(features_scaled)
+
+    lda = LinearDiscriminantAnalysis(n_components= 17)
+    components = lda.fit_transform(components, labels)
+
+    inertia = []
+    silhouette_scores = []
+    k_values = range(1, max_k)
+    for k in k_values:
+        kmeans = KMeans(n_clusters= k, random_state= 42)
+        cluster_labels = kmeans.fit_predict(components)
+        inertia.append(kmeans.inertia_)
+        if k > 1: silhouette_scores.append(silhouette_score(components, cluster_labels))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw ={'hspace': 0.5})
+    
+    ax1.plot(k_values, inertia, 'bx-')
+    ax1.set_xlabel('Number of clusters (k)')
+    ax1.set_ylabel('Inertia')
+    ax1.set_title('k-mean Elbow Method PCA 400 - LDA 17')
+
+    ax2.plot(k_values[1:], silhouette_scores, 'bx-')
+    ax2.set_xlabel('Number of clusters (k)')
+    ax2.set_ylabel('Silhouette Score')
+    ax2.set_title('k-mean Silhouette Analysis PCA 400 - LDA 17')
+
+    plt.show()
+
+
 if __name__ == '__main__':
-    elbow_analysys("5_frame")
+
+    features, labels = load_features('5_frame', remove_errors= True, ret_value= 'verb')
+
+    features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
+
+    find_k(features_scaled)
