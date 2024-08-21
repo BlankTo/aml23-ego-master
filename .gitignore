@@ -12,3 +12,8 @@ pp.py
 /clustering_results
 /TEST_RESULTS
 /__pycache__
+/extracted_feature_analysis/__pycache__
+/extracted_feature_analysis/__pycache__
+/extracted_feature_analysis/__pycache__
+extracted_feature_analysis/__pycache__/load_feat.cpython-310.pyc
+/extracted_feature_analysis/checkpoints

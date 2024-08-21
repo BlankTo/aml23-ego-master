@@ -42,25 +42,14 @@ def load_features(name, remove_errors= True, ret_value= 'verb'):
     clips_obj = []
     for feat in features:
         label = labels[feat['uid']]
-
-        if True: # only middle clip (in 5)
-
-            clip = feat['features_RGB'][2]
+        
+        for i in range(5):
+            clip = feat['features_RGB'][i]
             clips_features.append(clip)
             clips_label.append(label)
             clips_narration.append(label['narration'])
             clips_verb.append(label['verb'])
             clips_obj.append(label['narration'].split(' ')[-1])
-
-        else:
-        
-            for i in range(5):
-                clip = feat['features_RGB'][i]
-                clips_features.append(clip)
-                clips_label.append(label)
-                clips_narration.append(label['narration'])
-                clips_verb.append(label['verb'])
-                clips_obj.append(label['narration'].split(' ')[-1])
 
     clips_features = np.array(clips_features)
 
@@ -86,9 +75,9 @@ def load_features(name, remove_errors= True, ret_value= 'verb'):
                 new_clips_obj.append(clips_obj[i])
         
         clips_features = np.array(new_clips_features)
-        clips_narration = new_clips_narration
-        clips_verb = new_clips_verb
-        clips_obj = new_clips_obj
+        clips_narration = np.array(new_clips_narration)
+        clips_verb = np.array(new_clips_verb)
+        clips_obj = np.array(new_clips_obj)
 
     print(f"feature shape: {clips_features.shape}")
 
@@ -112,7 +101,6 @@ def load_features(name, remove_errors= True, ret_value= 'verb'):
     
 
 def scale_features(features, method= 'standard', ret_scaler= False):
-
 
     if method == 'standard':
         
