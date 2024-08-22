@@ -70,7 +70,8 @@ class EpicKitchensDataset(data.Dataset, ABC):
         logger.info('-------------------------------------------------------------------------------')
         
         for name, value in {attr: getattr(self, attr) for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}.items():
-            logger.info(f"{name}: {value}")
+            if name != 'video_list':
+                logger.info(f"{name}: {value}")
 
         logger.info('-------------------------------------------------------------------------------')
 
@@ -83,7 +84,116 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # Remember that the returned array should have size              #
         #           num_clip x num_frames_per_clip                       #
         ##################################################################
-        raise NotImplementedError("You should implement _get_train_indices")
+
+        ## here the implementation
+
+        num_frames_per_clip = self.num_frames_per_clip[modality]
+        num_clips = self.num_clips
+        dense_stride = self.stride
+
+        duration = record.num_frames
+
+        indices = []
+
+        if self.dense_sampling[modality]: # dense sampling
+
+            #print('---------------------------- video duration ----------------------------')
+            #print(duration[modality])
+
+            dense_clip_length = num_frames_per_clip * dense_stride
+
+            if duration[modality] < num_frames_per_clip: raise ValueError("video length must be greater than or equal to num_frames_per_clip")
+
+            if duration[modality] < dense_clip_length * num_clips:
+
+                dense_clip_length = num_frames_per_clip
+                dense_stride = 1
+
+            if duration[modality] <= (((num_clips - 1) * dense_clip_length) + (num_clips * (dense_clip_length - 1))):
+                    
+                    #print('no rand')
+    
+                    step = max(1, math.ceil((duration[modality] - dense_clip_length) / (num_clips - 1)))
+                    idxs = [i * step for i in range(num_clips)]
+                    clips_start = [min(idx, duration[modality] - dense_clip_length) for idx in idxs]
+
+            else:
+
+                #print('rand')
+
+                clips_start = []
+
+                for i in range(num_clips):
+                    ok = False
+                    while not ok:
+                        clip_start = random.randint(0, duration[modality] - 1 - dense_clip_length)
+                        ok = True
+                        for other_clip_start in clips_start:
+                            if (clip_start >= other_clip_start and clip_start <= other_clip_start + dense_clip_length) or (clip_start + dense_clip_length >= other_clip_start and clip_start + dense_clip_length <= other_clip_start + dense_clip_length):
+                                ok = False
+                                break
+                    clips_start.append(clip_start)
+
+            clips_start.sort()
+
+            #print(clips_start)
+            
+            for clip_start in clips_start:
+                frame_id = clip_start
+
+                for _ in range(num_frames_per_clip):
+                    indices.append(frame_id)
+                    frame_id += dense_stride
+            
+            #print(indices)
+
+        else: # Uniform sampling:
+
+            #print('---------------------------- video duration ----------------------------')
+            #print(duration[modality])
+
+            clips_start = []
+
+            if duration[modality] < 2 * num_frames_per_clip * num_clips:
+
+                #print('no stride')
+
+                for clip_start in range(0, duration[modality] - num_frames_per_clip, math.ceil((duration[modality] - num_frames_per_clip) / num_clips)):
+
+                    clips_start.append(clip_start)
+                    
+                    for frame_id in range(clip_start, clip_start + num_frames_per_clip):
+
+                        indices.append(frame_id)
+
+            else:
+
+                uniform_clip_length = math.floor(duration[modality] / num_clips)
+
+                #print(f'uniform stride of {uniform_clip_length / num_frames_per_clip}')
+
+                clip_start = 0
+                for _ in range(num_clips):
+
+                    clips_start.append(clip_start)
+
+                    frame_id = clip_start
+
+                    uniform_stride = math.floor(uniform_clip_length / num_frames_per_clip)
+
+                    for _ in range(num_frames_per_clip):
+
+                        indices.append(frame_id)
+
+                        frame_id += uniform_stride
+
+                    clip_start += uniform_clip_length
+
+        #print(clips_start)
+
+        return indices
+
+        #raise NotImplementedError("You should implement _get_train_indices")
 
     def _get_val_indices(self, record, modality):
 
@@ -102,70 +212,52 @@ class EpicKitchensDataset(data.Dataset, ABC):
         num_clips = self.num_clips
         dense_stride = self.stride
 
-        starting_frame = record.start_frame
         duration = record.num_frames
-
-        #logger.info("_get_val_indices modded ----------------------------------------------------------------------------------------------------------")
-        #logger.info(f"sample {record._index}, uid {record.uid}, untrimmed name {record.untrimmed_video_name}, kitchen {record.kitchen}, recording {record.recording}, start_frame {record.start_frame}, end_frame {record.end_frame}, num_frames {record.num_frames}, label {record.label}")
-
-        ######################################################
-
-#        indices = []
-#        
-#        if self.dense_sampling[modality]: # Dense sampling:
-#
-#            starting_dense_idx = random.randint(0, duration[modality] - num_frames_per_clip * dense_stride)
-#            for frame_id in range(starting_dense_idx, starting_dense_idx + num_frames_per_clip * dense_stride, dense_stride): indices.append(starting_frame + frame_id)
-#
-#        else: # Uniform sampling:
-#            
-#            for frame_id in range(0, duration[modality], int( duration[modality] / num_frames_per_clip )): indices.append(starting_frame + frame_id)
-#
-#        logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
-#
-#        return indices
-    
-        #######################################################
-
-        #indices = [0 for _ in range(16 * num_clips)]
-        #return indices
-
-        #######################################################
 
         indices = []
 
-        if self.dense_sampling[modality]:
+        if self.dense_sampling[modality]: # dense sampling
+
+            #print('---------------------------- video duration ----------------------------')
+            #print(duration[modality])
 
             dense_clip_length = num_frames_per_clip * dense_stride
 
-            if duration[modality] < dense_clip_length:
+            if duration[modality] < num_frames_per_clip: raise ValueError("video length must be greater than or equal to num_frames_per_clip")
+
+            if duration[modality] < dense_clip_length * num_clips:
 
                 dense_clip_length = num_frames_per_clip
                 dense_stride = 1
-
-            clip_start = 0
-            for _ in range(num_clips):
-
+    
+            step = max(1, math.ceil((duration[modality] - dense_clip_length) / (num_clips - 1)))
+            idxs = [i * step for i in range(num_clips)]
+            clips_start = [min(idx, duration[modality] - dense_clip_length) for idx in idxs]
+            
+            for clip_start in clips_start:
                 frame_id = clip_start
 
                 for _ in range(num_frames_per_clip):
-
                     indices.append(frame_id)
-
                     frame_id += dense_stride
 
-                clip_start += dense_clip_length
-
-            #for clip_start in range(0, duration[modality] - dense_clip_length, math.ceil((duration[modality] - dense_clip_length) / num_clips)):
-                #for frame_id in range(clip_start, clip_start + dense_clip_length, dense_stride):
-                    #indices.append(frame_id)
+            #print(clips_start)
 
         else: # Uniform sampling:
 
+            #print('---------------------------- video duration ----------------------------')
+            #print(duration[modality])
+
+            clips_start = []
+
             if duration[modality] < 2 * num_frames_per_clip * num_clips:
+
+                #print('no stride')
 
                 for clip_start in range(0, duration[modality] - num_frames_per_clip, math.ceil((duration[modality] - num_frames_per_clip) / num_clips)):
 
+                    clips_start.append(clip_start)
+                    
                     for frame_id in range(clip_start, clip_start + num_frames_per_clip):
 
                         indices.append(frame_id)
@@ -174,8 +266,12 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
                 uniform_clip_length = math.floor(duration[modality] / num_clips)
 
+                #print(f'uniform stride of {uniform_clip_length / num_frames_per_clip}')
+
                 clip_start = 0
                 for _ in range(num_clips):
+
+                    clips_start.append(clip_start)
 
                     frame_id = clip_start
 
@@ -189,13 +285,11 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
                     clip_start += uniform_clip_length
 
-        #logger.info(f"sample {record._index}, len {len(indices)} -> {indices} -----------------------------------------------------------------------------------------------------------------")
+        #print(clips_start)
 
         return indices
-    
-        #######################################################
 
-        #raise NotImplementedError("You should implement _get_val_indices")
+        #raise NotImplementedError("You should implement _get_train_indices")
 
     def __getitem__(self, index):
 
@@ -243,7 +337,23 @@ class EpicKitchensDataset(data.Dataset, ABC):
         for frame_index in indices:
             p = int(frame_index)
             # here the frame is loaded in memory
-            frame = self._load_data(modality, record, p)
+            error = True
+            last = False
+            #print('---')
+            while error:
+                error = False
+                #print(f'this is visible - {frame_index}')
+                try:
+                    frame = self._load_data(modality, record, p)
+                except FileNotFoundError as e:
+                    if not last:
+                        if p == record.num_frames[modality]:
+                            last = True
+                    if last: p -= 1
+                    else: p += 1
+                    error = True
+
+            #print('this is not')
             images.extend(frame)
         # finally, all the transformations are applied
         process_data = self.transform[modality](images)
@@ -260,7 +370,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
             try:
                 img = Image.open(os.path.join(data_path, record.untrimmed_video_name, record.untrimmed_video_name, tmpl.format(idx_untrimmed))).convert('RGB')
             except FileNotFoundError:
-                print("Img not found")
+                #print("Img not found")
                 max_idx_video = int(sorted(glob.glob(os.path.join(data_path, record.untrimmed_video_name, record.untrimmed_video_name, "img_*")))[-1].split("_")[-1].split(".")[0])
                 if idx_untrimmed > max_idx_video:
                     img = Image.open(os.path.join(data_path, record.untrimmed_video_name, record.untrimmed_video_name, tmpl.format(max_idx_video))).convert('RGB')

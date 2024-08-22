@@ -191,20 +191,12 @@ class InceptionI3d(nn.Module):
             self.add_module(k, self.end_points[k])
 
     def forward(self, x):
-        print('-------------------------------------')
-        print('-------------------------------------')
-        print('-------------------------------------')
         for end_point in self.VALID_ENDPOINTS:
-            print(x.shape)
             if end_point in self.end_points:
                 x = self._modules[end_point](x)  # use _modules to work with dataparallel
         
-        print('-------------------------------------')
-        print(x.shape)
         x = self.avg_pool(x)
-        print(x.shape)
         feat = x.squeeze(-1).squeeze(-1).squeeze(-1)
-        print(feat.shape)
         x = self.logits(self.dropout(x))
         logits = x.squeeze(3).squeeze(3).squeeze(2)
         return logits, {"features": feat}
