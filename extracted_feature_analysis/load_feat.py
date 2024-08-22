@@ -17,11 +17,11 @@ from scipy.spatial import ConvexHull
 from scipy.stats import pearsonr
 from collections import Counter
 
-def load_features(name, remove_errors= True, ret_value= 'verb'):
+def load_features(name, mode= 'train', remove_errors= True, ret_value= 'verb'):
 
     os.environ['LOKY_MAX_CPU_COUNT'] = '4'
 
-    with open("saved_features//" + name + "_D1_test.pkl", 'rb') as f:
+    with open("saved_features//" + name + "_D1_" + {mode} + ".pkl", 'rb') as f:
         saved_features = pickle.load(f)
 
     with open("train_val//D1_test.pkl", 'rb') as f:

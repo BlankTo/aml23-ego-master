@@ -168,7 +168,7 @@ def find_k(features_scaled):
 
 if __name__ == '__main__':
 
-    features, labels = load_features('5_frame', remove_errors= True, ret_value= 'verb')
+    features, labels = load_features('5_frame', mode= 'train', remove_errors= True, ret_value= 'verb')
 
     features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
 

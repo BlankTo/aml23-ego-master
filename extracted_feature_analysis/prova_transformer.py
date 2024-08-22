@@ -9,7 +9,7 @@ from load_feat import load_features, scale_features, get_numerical_labels
 
 from torch.nn import Transformer
 
-features, labels = load_features('5_frame', remove_errors= True, ret_value= 'verb')
+features, labels = load_features('5_frame', mode= 'train', remove_errors= True, ret_value= 'verb')
 labels = np.array(labels)
 
 features = scale_features(features, method= 'standard', ret_scaler= False)
