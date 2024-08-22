@@ -258,7 +258,7 @@ def k_means_clustering(features_scaled, labels, k= 8, name_addon=''):
 
 if __name__ == '__main__':
 
-    features, labels = load_features('5_frame', mode= 'train', remove_errors= True, ret_value= 'verb')
+    features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
 
     features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
 
