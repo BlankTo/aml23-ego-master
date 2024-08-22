@@ -143,6 +143,7 @@ def get_colors(labels):
     if len(label_set) > len(cmap):
         print('oof')
         cmap = plt.cm.get_cmap('viridis', len(label_set))
+        cmap = [cmap(i) for i in range(len(label_set))]
 
     color_map = {label: cmap[i] for i, label in enumerate(set(labels))}
     colors = [color_map[label] for label in labels]
