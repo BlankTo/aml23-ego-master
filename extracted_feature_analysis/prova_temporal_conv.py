@@ -69,10 +69,10 @@ def train_model(model, X_train, y_train, X_test, y_test, epochs=100, save= True)
 
     if save:
         torch.save({
-            'epoch': epoch,  # Current epoch
-            'model_state_dict': model.state_dict(),  # Model parameters
-            'optimizer_state_dict': optimizer.state_dict(),  # Optimizer parameters
-            'loss': loss,  # Loss value
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss,
         }, 'extracted_feature_analysis/checkpoints/prova_checkpoint_temporal_conv.pth')
 
 train_model(model, X_train, y_train, X_test, y_test)
