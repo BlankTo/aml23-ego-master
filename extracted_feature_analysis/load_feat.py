@@ -57,9 +57,11 @@ def load_features(name, remove_errors= True, ret_value= 'verb'):
 
     if remove_errors:
 
+        print(f'here {len(clips_verb)}')
+
         to_remove = []
         for v in set(clips_verb):
-            if clips_verb.count(v) < 2:
+            if clips_verb.count(v) < 6:
                 to_remove.append(v)
         print(f"removing {to_remove}")
 
@@ -80,6 +82,7 @@ def load_features(name, remove_errors= True, ret_value= 'verb'):
         clips_obj = np.array(new_clips_obj)
 
     print(f"feature shape: {clips_features.shape}")
+    print(f"labels shape: {clips_verb.shape}")
 
     if ret_value == 'narration':
         print(f"n classes (narrations): {len(set(clips_narration))}")
@@ -138,6 +141,7 @@ def get_colors(labels):
         "#adff2f"   # Green Yellow
     ]
     if len(label_set) > len(cmap):
+        print('oof')
         cmap = plt.cm.get_cmap('viridis', len(label_set))
 
     color_map = {label: cmap[i] for i, label in enumerate(set(labels))}
