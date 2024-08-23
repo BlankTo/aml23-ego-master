@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
-from load_feat import load_features, scale_features
+from extracted_feature_analysis.old.load_feat import load_features_RGB, scale_features
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 def find_k(features_scaled):
@@ -110,7 +110,7 @@ def find_k(features_scaled):
 
     ##
 
-    lda = LinearDiscriminantAnalysis(n_components= 17)
+    lda = LinearDiscriminantAnalysis(n_components= len(set(labels)) - 1)
     components = lda.fit_transform(features_scaled, labels)
 
     inertia = []
@@ -139,7 +139,7 @@ def find_k(features_scaled):
     pca = PCA(n_components= 400)
     components = pca.fit_transform(features_scaled)
 
-    lda = LinearDiscriminantAnalysis(n_components= 17)
+    lda = LinearDiscriminantAnalysis(n_components= len(set(labels)) - 1)
     components = lda.fit_transform(components, labels)
 
     inertia = []
@@ -168,7 +168,7 @@ def find_k(features_scaled):
 
 if __name__ == '__main__':
 
-    features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+    features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
 
     features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
 

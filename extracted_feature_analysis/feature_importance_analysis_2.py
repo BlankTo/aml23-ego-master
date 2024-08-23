@@ -1,9 +1,8 @@
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from load_feat import load_features, scale_features, get_colors
+from load_feat_2 import load_features_RGB, scale_features
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 
@@ -48,7 +47,7 @@ def feature_importance_score(features_scaled, labels):
 
     ## LDA 17 features
 
-    lda = LinearDiscriminantAnalysis(n_components= 17)
+    lda = LinearDiscriminantAnalysis(n_components= len(set(labels)) - 1)
     components = lda.fit_transform(features_scaled, labels)
 
     clf = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -69,7 +68,7 @@ def feature_importance_score(features_scaled, labels):
 
 if __name__ == '__main__':
 
-    features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+    features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train')
 
     features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
 

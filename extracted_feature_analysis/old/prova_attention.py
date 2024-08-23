@@ -5,9 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from load_feat import load_features, scale_features, get_numerical_labels
+from extracted_feature_analysis.old.load_feat import load_features_RGB, scale_features, get_numerical_labels
 
-features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
 labels = np.array(labels)
 
 features = scale_features(features, method= 'standard', ret_scaler= False)

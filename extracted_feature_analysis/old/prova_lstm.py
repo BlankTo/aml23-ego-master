@@ -5,9 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from load_feat import load_features, scale_features, get_numerical_labels
+from extracted_feature_analysis.old.load_feat import load_features_RGB, scale_features, get_numerical_labels
 
-features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
 labels = np.array(labels)
 
 features = scale_features(features, method= 'standard', ret_scaler= False)
@@ -15,33 +15,37 @@ print(features.shape)
 
 labels, num_to_verb, verb_to_num = get_numerical_labels(labels)
 
-features = torch.from_numpy(features)
-labels = torch.from_numpy(labels).long()
+features = torch.from_numpy(features.reshape(-1, 5, 1024))
+labels = torch.from_numpy(labels[::5]).long()
+
+print(features.shape)
+print(labels.shape)
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size= 0.2, random_state= 42)
 
-n_neuron = 34
-
-# Define a simple MLP classifier
-class SimpleMLP(nn.Module):
-    def __init__(self, input_dim, num_classes):
-        super(SimpleMLP, self).__init__()
-        self.fc1 = nn.Linear(input_dim, n_neuron)
-        self.fc3 = nn.Linear(n_neuron, num_classes)
-        
+class LSTMClassifier(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
+        super(LSTMClassifier, self).__init__()
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, num_classes)
+    
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc3(x)
-        return x
+        h_0 = torch.zeros(1, x.size(0), hidden_dim).to(x.device)  # Initial hidden state
+        c_0 = torch.zeros(1, x.size(0), hidden_dim).to(x.device)  # Initial cell state
+        out, _ = self.lstm(x, (h_0, c_0))
+        out = out[:, -1, :]  # Take the output of the last time step
+        out = self.fc(out)
+        return out
 
 # Model, Loss, Optimizer
-model = SimpleMLP(input_dim=1024, num_classes=len(set(labels)))
+hidden_dim = 256
+num_layers = 1
+model = LSTMClassifier(input_dim=1024, hidden_dim=hidden_dim, num_layers=num_layers, num_classes=len(set(labels)))
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Training loop
-def train_model(model, X_train, y_train, X_test, y_test, epochs=1000, save= True):
+def train_model(model, X_train, y_train, X_test, y_test, epochs=20, save= True):
     for epoch in range(epochs):
         model.train()
         optimizer.zero_grad()
@@ -64,6 +68,7 @@ def train_model(model, X_train, y_train, X_test, y_test, epochs=1000, save= True
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-        }, 'extracted_feature_analysis/checkpoints/prova_checkpoint_no_temp.pth')
+        }, 'extracted_feature_analysis/checkpoints/prova_checkpoint_lstm.pth')
 
 train_model(model, X_train, y_train, X_test, y_test)
+

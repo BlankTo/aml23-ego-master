@@ -57,9 +57,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
             self.model_features = None
             for m in self.modalities:
                 # load features for each modality
-                model_features = pd.DataFrame(pd.read_pickle(os.path.join("saved_features",
-                                                                          self.dataset_conf[m].features_name + "_" +
-                                                                          pickle_name))['features'])[["uid", "features_" + m]]
+                model_features = pd.DataFrame(pd.read_pickle(os.path.join("saved_features", f"5_frame_{self.dataset_conf[m].features_name}_{pickle_name}"))['features'])[["uid", "features_" + m]]
                 if self.model_features is None:
                     self.model_features = model_features
                 else:
@@ -76,6 +74,9 @@ class EpicKitchensDataset(data.Dataset, ABC):
         logger.info('-------------------------------------------------------------------------------')
 
     def _get_train_indices(self, record, modality='RGB'):
+        
+        #print('get_train_indices')
+        
         ##################################################################
         # TODO: implement sampling for training mode                     #
         # Give the record and the modality, this function should return  #
@@ -196,6 +197,8 @@ class EpicKitchensDataset(data.Dataset, ABC):
         #raise NotImplementedError("You should implement _get_train_indices")
 
     def _get_val_indices(self, record, modality):
+        
+        #print('get_val_indices')
 
         ##################################################################
         # TODO: implement sampling for testing mode                      #
@@ -299,6 +302,8 @@ class EpicKitchensDataset(data.Dataset, ABC):
         # notice that it is already converted into a EpicVideoRecord object so that here you can access
         # all the properties of the sample easily
         record = self.video_list[index]
+
+        #print(self.mode)
 
         if self.load_feat:
             sample = {}

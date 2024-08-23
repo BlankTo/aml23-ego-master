@@ -5,9 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from load_feat import load_features, scale_features, get_numerical_labels
+from extracted_feature_analysis.old.load_feat import load_features_RGB, scale_features, get_numerical_labels
 
-features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
 labels = np.array(labels)
 
 features = scale_features(features, method= 'standard', ret_scaler= False)
@@ -21,32 +21,34 @@ labels = torch.from_numpy(labels[::5]).long()
 print(features.shape)
 print(labels.shape)
 
-# Aggregating the features by averaging over the temporal dimension
-aggregated_features = torch.mean(features, dim=1)  # Shape: (435, 1024)
-
 # Split data
-X_train, X_test, y_train, y_test = train_test_split(aggregated_features, labels, test_size= 0.2, random_state= 42)
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size= 0.2, random_state= 42)
 
-n_neuron = 34
-
-# Define a simple MLP classifier
-class SimpleMLP(nn.Module):
+class DualStreamNetwork(nn.Module):
     def __init__(self, input_dim, num_classes):
-        super(SimpleMLP, self).__init__()
-        self.fc1 = nn.Linear(input_dim, n_neuron)
-        self.fc3 = nn.Linear(n_neuron, num_classes)
-        
+        super(DualStreamNetwork, self).__init__()
+        self.stream1 = nn.Sequential(
+            nn.Linear(input_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256)
+        )
+        self.stream2 = nn.LSTM(input_dim, 256, batch_first=True)
+        self.fc = nn.Linear(512, num_classes)
+    
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc3(x)
+        # x shape: (batch_size, clip_in_sample, features_per_clip)
+        x_stream1 = self.stream1(x.mean(dim=1))  # Static features
+        x_stream2, _ = self.stream2(x)  # Temporal features
+        x_stream2 = x_stream2[:, -1, :]  # Take the last time step output
+        x = torch.cat([x_stream1, x_stream2], dim=1)  # Concatenate features from both streams
+        x = self.fc(x)
         return x
 
 # Model, Loss, Optimizer
-model = SimpleMLP(input_dim=1024, num_classes=len(set(labels)))
+model = DualStreamNetwork(input_dim=1024, num_classes=len(set(labels)))
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Training loop
 def train_model(model, X_train, y_train, X_test, y_test, epochs=100, save= True):
     for epoch in range(epochs):
         model.train()
@@ -70,6 +72,7 @@ def train_model(model, X_train, y_train, X_test, y_test, epochs=100, save= True)
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-        }, 'extracted_feature_analysis/checkpoints/prova_checkpoint_aggregated_perceptron.pth')
+        }, 'extracted_feature_analysis/checkpoints/prova_checkpoint_dual.pth')
 
 train_model(model, X_train, y_train, X_test, y_test)
+

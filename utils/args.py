@@ -40,9 +40,13 @@ else:
     args = OmegaConf.merge(args, conf_args)
 
 if cli_args["n_frame"]:
-    args.save.num_frames_per_clip = {"RGB": cli_args["n_frame"]}
+    try:
+        args.save.num_frames_per_clip = {"RGB": cli_args["n_frame"]}
+    except: pass
 if args.name == "placeholder":
-    args.name = f"{args.save.num_frames_per_clip['RGB']}_frame"
+    try:
+        args.name = f"{args.save.num_frames_per_clip['RGB']}_frame"
+    except: pass
 
 path_args = add_paths()
 args = OmegaConf.merge(args, path_args)

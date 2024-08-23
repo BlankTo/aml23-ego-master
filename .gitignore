@@ -18,3 +18,5 @@ pp.py
 extracted_feature_analysis/__pycache__/load_feat.cpython-310.pyc
 /extracted_feature_analysis/checkpoints
 prova.py
+/Experiment_logs
+/extracted_feature_analysis/__pycache__

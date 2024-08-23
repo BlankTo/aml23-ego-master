@@ -1,5 +1,5 @@
-action: ??? # train or test
-name: placeholder # name of the experiment needed for the logs
+action: train # train or test
+name: prova_train_classifier # name of the experiment needed for the logs
 modality: ["RGB"] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
@@ -9,22 +9,29 @@ resume_from: null # checkpoint directory
 logname: null # name of the logs
 models_dir: null # directory containing all the models
 
+save:
+  num_clips: 5
+  dense_sampling:
+    RGB: True
+  num_frames_per_clip:
+    RGB: 5
+
 train:
-  num_iter: 5000 # number of training iterations with total_batch size
+  num_iter: 1000 # number of training iterations with total_batch size # 5000
   lr_steps: 3000 # steps before reducing learning rate
   eval_freq: 50 # evaluation frequency
   num_clips: 1 # clips adopted in training
   dense_sampling: # sampling version adopted in training for each modality
     RGB: True
   num_frames_per_clip: # number of frames adopted in training for each modality
-    RGB: 16
+    RGB: 5
 
 test:
   num_clips: 5 # number of clips in testing
   dense_sampling: # sampling version adopted in test for each modality
     RGB: True
   num_frames_per_clip: # number of frames adopted in test for each modality
-    RGB: 16
+    RGB: 5
 
 dataset:
   annotations_path: train_val # path for the annotations data
@@ -32,20 +39,22 @@ dataset:
   workers: 4 # 4 # number of workers for the dataloader ##################################################################
   stride: 2 # stride in case of dense sampling
   resolution: 224 # input resolution to the model
+  num_classes: 20
   RGB:
     data_path: ??? # path to RGB data
     tmpl: "img_{:010d}.jpg" # format of RGB filenames
-    features_name: test_feat_kinetics
+    features_name: RGB
   Event: # not neeeded for the project
     rgb4e: 6
 
 # these are the action recognition models for each modality
 models:
   RGB:
-    model: Classifier
+    model: MLP
     normalize: False
     kwargs: {}
     lr_steps: 3000
     lr: 0.01
     sgd_momentum: 0.9
     weight_decay: 1e-7
+    num_classes: 17

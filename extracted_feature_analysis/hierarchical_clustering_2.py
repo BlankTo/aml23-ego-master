@@ -2,7 +2,7 @@ import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
-from load_feat import load_features, scale_features, get_colors 
+from load_feat_2 import load_features_RGB, scale_features, get_colors 
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
@@ -14,7 +14,7 @@ def hierarchical_clustering(features_scaled, labels, name_addon=''):
 
     ## hierarchical clustering
 
-    max_distance = 50
+    max_distance = 100
 
     Z = linkage(features_scaled, method= 'ward')
     dendro = dendrogram(Z)
@@ -44,7 +44,7 @@ def hierarchical_clustering(features_scaled, labels, name_addon=''):
     pca = PCA(n_components= 400)
     features_scaled_pca = pca.fit_transform(features_scaled)
 
-    max_distance = 50
+    max_distance = 100
 
     Z = linkage(features_scaled_pca, method= 'ward')  # 'ward' minimizes the variance of the clusters being merged
     dendro = dendrogram(Z)
@@ -71,11 +71,11 @@ def hierarchical_clustering(features_scaled, labels, name_addon=''):
 
     ## hierarchical clustering after LDA
 
-    lda = LinearDiscriminantAnalysis(n_components= 17)
+    lda = LinearDiscriminantAnalysis(n_components= len(set(labels)) - 1)
     lda = lda.fit(features_scaled, labels)
     features_scaled_lda = lda.transform(features_scaled)
 
-    max_distance = 10
+    max_distance = 30
 
     Z = linkage(features_scaled_lda, method= 'ward')  # 'ward' minimizes the variance of the clusters being merged
     dendro = dendrogram(Z)
@@ -103,7 +103,7 @@ def hierarchical_clustering(features_scaled, labels, name_addon=''):
 
 if __name__ == '__main__':
 
-    features, labels = load_features('5_frame', split= 'D1', mode= 'train', remove_errors= True, ret_value= 'verb')
+    features, labels = load_features_RGB('5_frame', split= 'D1', mode= 'train')
 
     features_scaled = scale_features(features, method= 'standard', ret_scaler= False)
 
