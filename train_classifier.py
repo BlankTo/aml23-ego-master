@@ -1,6 +1,6 @@
 from datetime import datetime
 from statistics import mean
-from utils.logger import logger
+from utils.logger import logger, clean_false_log
 import torch.nn.parallel
 import torch.optim
 import torch
@@ -61,6 +61,22 @@ def main():
         match args.models[m].model:
             case "MLP":
                 models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
+            case "LSTM":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
+            case "AttentionClassifier":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "MemoryAugmentedNetwork":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
+            case "CombinedModel":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].mlp_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
+            case "DualStreamNetwork":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "HierarchicalModel":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
+            case "TemporalConvNet":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
+            case "TemporalFusionTransformer":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
 
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
@@ -88,7 +104,7 @@ def main():
                                                                      None, load_feat= True),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
-        train(action_classifier, train_loader, val_loader, device, num_classes)
+        train(action_classifier, train_loader, val_loader, device, num_classes, args.models[m].model)
 
     elif args.action == "validate":
         if args.resume_from is not None:
@@ -99,10 +115,10 @@ def main():
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
 
-        validate(action_classifier, val_loader, device, action_classifier.current_iter, num_classes)
+        validate(action_classifier, val_loader, device, action_classifier.current_iter, num_classes, args.models[m].model)
 
 
-def train(action_classifier, train_loader, val_loader, device, num_classes):
+def train(action_classifier, train_loader, val_loader, device, num_classes, model_name):
     """
     function to train the model on the test set
     action_classifier: Task containing the model to be trained
@@ -146,19 +162,149 @@ def train(action_classifier, train_loader, val_loader, device, num_classes):
         logger.info(f"Iteration {i}/{training_iterations} batch retrieved! Elapsed time = "
                     f"{(end_t - start_t).total_seconds() // 60} m {(end_t - start_t).total_seconds() % 60} s")
 
+        ########
+
         ''' Action recognition'''
-        source_label = source_label.to(device)
-        data = {}
 
-        for clip in range(args.train.num_clips):
-            # in case of multi-clip training one clip per time is processed
-            for m in modalities:
-                data[m] = source_data[m][:, clip].to(device)
+        match(model_name):
 
-            logits, _ = action_classifier.forward(data)
-            action_classifier.compute_loss(logits, source_label, loss_weight=1)
-            action_classifier.backward(retain_graph=False)
-            action_classifier.compute_accuracy(logits, source_label)
+            case 'MLP':
+
+                source_label = source_label.to(device)
+                data = {}
+
+                for clip in range(args.train.num_clips):
+                    # in case of multi-clip training one clip per time is processed
+                    for m in modalities:
+                        data[m] = source_data[m][:, clip].to(device)
+
+                    logits, _ = action_classifier.forward(data)
+                    action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                    action_classifier.backward(retain_graph=False)
+                    action_classifier.compute_accuracy(logits, source_label)
+
+            case 'LSTM':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'AttentionClassifier':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'MemoryAugmentedNetwork':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'CombinedModel':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'DualStreamNetwork':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'HierarchicalModel':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'TemporalConvNet':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+            case 'TemporalFusionTransformer':
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+        ########
+
+#        ''' Action recognition'''
+#        
+#        source_label = source_label.to(device)
+#        data = {}
+#
+#        for clip in range(args.train.num_clips):
+#            # in case of multi-clip training one clip per time is processed
+#            for m in modalities:
+#                data[m] = source_data[m][:, clip].to(device)
+#
+#            logits, _ = action_classifier.forward(data)
+#            action_classifier.compute_loss(logits, source_label, loss_weight=1)
+#            action_classifier.backward(retain_graph=False)
+#            action_classifier.compute_accuracy(logits, source_label)
+
+        #########
 
         # update weights and zero gradients if total_batch samples are passed
         if gradient_accumulation_step:
@@ -173,7 +319,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes):
         # every eval_freq "real iteration" (iterations on total_batch) the validation is done, notice we validate and
         # save the last 9 models
         if gradient_accumulation_step and real_iter % args.train.eval_freq == 0:
-            val_metrics = validate(action_classifier, val_loader, device, int(real_iter), num_classes)
+            val_metrics = validate(action_classifier, val_loader, device, int(real_iter), num_classes, model_name)
 
             if val_metrics['top1'] <= action_classifier.best_iter_score:
                 logger.info("New best accuracy {:.2f}%"
@@ -187,7 +333,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes):
             action_classifier.train(True)
 
 
-def validate(model, val_loader, device, it, num_classes):
+def validate(model, val_loader, device, it, num_classes, model_name):
     """
     function to validate the model on the test set
     model: Task containing the model to be tested
@@ -208,20 +354,121 @@ def validate(model, val_loader, device, it, num_classes):
             label = label.to(device)
 
             for m in modalities:
+                #print(f'data: {data[m].shape}')
                 batch = data[m].shape[0]
-                logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
+                #print(f'batch: {batch}')
+                match(model_name):
 
-            clip = {}
-            for i_c in range(args.test.num_clips):
-                for m in modalities:
-                    clip[m] = data[m][:, i_c].to(device)
+                    case 'MLP':
+                        logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
 
-                output, _ = model(clip)
-                for m in modalities:
-                    logits[m][i_c] = output[m]
+                    case 'LSTM':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
 
-            for m in modalities:
-                logits[m] = torch.mean(logits[m], dim=0)
+                    case 'AttentionClassifier':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'MemoryAugmentedNetwork':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'CombinedModel':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'DualStreamNetwork':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'HierarchicalModel':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'TemporalConvNet':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                    case 'TemporalFusionTransformer':
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                #print(f'logits: {logits[m].shape}')
+
+            ##### mine
+
+            match (model_name):
+
+                case 'MLP': # original
+
+                    clip = {}
+                    for i_c in range(args.test.num_clips):
+                        for m in modalities:
+                            clip[m] = data[m][:, i_c].to(device)
+
+                        output, _ = model(clip)
+                        for m in modalities:
+                            logits[m][i_c] = output[m]
+
+                    for m in modalities:
+                        logits[m] = torch.mean(logits[m], dim=0)
+
+                case 'LSTM':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'AttentionClassifier':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'MemoryAugmentedNetwork':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'CombinedModel':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'DualStreamNetwork':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'HierarchicalModel':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'TemporalConvNet':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
+
+                case 'TemporalFusionTransformer':
+
+                    for m in modalities:
+                        output, _ = model(data)
+                        #print(f"output_:{output[m].shape}")
+                        for m in modalities:
+                            logits[m] = output[m]
 
             model.compute_accuracy(logits, label)
 

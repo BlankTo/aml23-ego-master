@@ -74,6 +74,11 @@ class ActionRecognition(tasks.Task, ABC):
         logits = {}
         features = {}
         for i_m, m in enumerate(self.modalities):
+            #print(type(data))
+            #print(data.items())
+            #print(data[m])
+            #print(type(data[m]))
+            #print(data[m].shape)
             logits[m], feat = self.task_models[m](x=data[m], **kwargs)
             if i_m == 0:
                 for k in feat.keys():

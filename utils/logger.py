@@ -2,6 +2,8 @@ import logging
 import coloredlogs
 from utils.args import args
 import sys
+import os
+import shutil
 
 
 def setup_logger(name, logfile=None):
@@ -22,6 +24,15 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+def clean_false_log():
+    for folder in os.listdir(os.path.dirname(os.path.dirname(args.logfile))):
+        folder_path = os.path.join(os.path.dirname(os.path.dirname(args.logfile)), folder)
+        for file in os.listdir(folder_path):
+            if os.path.getsize(os.path.join(folder_path, file)) == 0:
+                try:
+                    shutil.rmtree(folder_path)
+                except: pass
 
 
 sys.excepthook = handle_exception

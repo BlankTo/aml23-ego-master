@@ -57,6 +57,10 @@ class Accuracy(object):
         target: torch.Tensor -> ground truth labels
         perclass_acc -> bool, True if you want to compute also the top-1 accuracy per class
         """
+
+        #print(f"output: {output.shape}")
+        #print(f"target: {target.shape}")
+
         maxk = max(topk)
         batch_size = target.size(0)
 
