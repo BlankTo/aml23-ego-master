@@ -20,6 +20,9 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
+temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2", "MLP_avg_pooling", "MLP_max_pooling", "TRN", "LSTM_other"]
+other_models = ["MLP_single_clip", "LSTM_other_single_clip"]
+
 
 def init_operations():
     """
@@ -59,8 +62,10 @@ def main():
         #models[m] = getattr(model_list, args.models[m].model)()
 
         match args.models[m].model:
-            case "MLP":
-                models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
+            case "MLP_single_clip":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
+            case "MLP_flatten":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
             case "LSTM":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
             case "AttentionClassifier":
@@ -77,6 +82,18 @@ def main():
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
             case "TemporalFusionTransformer":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "TemporalConvNet_2":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
+            case "MLP_avg_pooling":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+            case "MLP_max_pooling":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+            case "TRN":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+            case "LSTM_other":
+                models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
+            case "LSTM_other_single_clip":
+                models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
 
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
@@ -166,9 +183,20 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
 
         ''' Action recognition'''
 
-        match(model_name):
+        if model_name in temporal_dim_models:
+        
+                source_label = source_label.to(device)
+                data = {}
 
-            case 'MLP':
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+        elif model_name in other_models:
 
                 source_label = source_label.to(device)
                 data = {}
@@ -183,109 +211,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                     action_classifier.backward(retain_graph=False)
                     action_classifier.compute_accuracy(logits, source_label)
 
-            case 'LSTM':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'AttentionClassifier':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'MemoryAugmentedNetwork':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'CombinedModel':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'DualStreamNetwork':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'HierarchicalModel':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'TemporalConvNet':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-            case 'TemporalFusionTransformer':
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
+        else: exit()
 
         ########
 
@@ -357,118 +283,34 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                 #print(f'data: {data[m].shape}')
                 batch = data[m].shape[0]
                 #print(f'batch: {batch}')
-                match(model_name):
 
-                    case 'MLP':
+                if model_name in temporal_dim_models:
+                        
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                        for m in modalities:
+                            output, _ = model(data)
+                            #print(f"output_:{output[m].shape}")
+                            for m in modalities:
+                                logits[m] = output[m]
+
+                elif model_name in other_models:
+                        
                         logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
 
-                    case 'LSTM':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+                        clip = {}
+                        for i_c in range(args.test.num_clips):
+                            for m in modalities:
+                                clip[m] = data[m][:, i_c].to(device)
 
-                    case 'AttentionClassifier':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+                            output, _ = model(clip)
+                            for m in modalities:
+                                logits[m][i_c] = output[m]
 
-                    case 'MemoryAugmentedNetwork':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                    case 'CombinedModel':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                    case 'DualStreamNetwork':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                    case 'HierarchicalModel':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                    case 'TemporalConvNet':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                    case 'TemporalFusionTransformer':
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                #print(f'logits: {logits[m].shape}')
-
-            ##### mine
-
-            match (model_name):
-
-                case 'MLP': # original
-
-                    clip = {}
-                    for i_c in range(args.test.num_clips):
                         for m in modalities:
-                            clip[m] = data[m][:, i_c].to(device)
+                            logits[m] = torch.mean(logits[m], dim=0)
 
-                        output, _ = model(clip)
-                        for m in modalities:
-                            logits[m][i_c] = output[m]
-
-                    for m in modalities:
-                        logits[m] = torch.mean(logits[m], dim=0)
-
-                case 'LSTM':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'AttentionClassifier':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'MemoryAugmentedNetwork':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'CombinedModel':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'DualStreamNetwork':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'HierarchicalModel':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'TemporalConvNet':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
-
-                case 'TemporalFusionTransformer':
-
-                    for m in modalities:
-                        output, _ = model(data)
-                        #print(f"output_:{output[m].shape}")
-                        for m in modalities:
-                            logits[m] = output[m]
+                else: exit()
 
             model.compute_accuracy(logits, label)
 

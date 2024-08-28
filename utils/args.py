@@ -39,14 +39,14 @@ else:
     conf_args = OmegaConf.load(os.path.join(conf_path, "debug.yaml"))
     args = OmegaConf.merge(args, conf_args)
 
-if cli_args["n_frame"]:
-    try:
-        args.save.num_frames_per_clip = {"RGB": cli_args["n_frame"]}
-    except: pass
-if args.name == "placeholder":
-    try:
-        args.name = f"{args.save.num_frames_per_clip['RGB']}_frame"
-    except: pass
+#if cli_args["n_frame"]:
+#    try:
+#        args.save.num_frames_per_clip = {"RGB": cli_args["n_frame"]}
+#    except: pass
+#if args.name == "placeholder":
+#    try:
+#        args.name = f"{args.save.num_frames_per_clip['RGB']}_frame"
+#    except: pass
 
 path_args = add_paths()
 args = OmegaConf.merge(args, path_args)

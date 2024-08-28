@@ -1,19 +1,82 @@
 import torch
 from torch import nn
 from torch.nn import Transformer
+import itertools
 
-class MLP(nn.Module):
-    def __init__(self, num_classes, batch_size):
-        super(MLP, self).__init__()
-        self.input_size = 1024
+class MLP_single_clip(nn.Module):
+    def __init__(self, input_size, hidden_dim, num_classes):
+        super(MLP_single_clip, self).__init__()
+        self.input_size = input_size
         self.mlp = nn.Sequential(
-            nn.Linear(self.input_size, 512),
-            nn.Linear(512, num_classes)
+            nn.Linear(self.input_size, hidden_dim),
+            nn.Linear(hidden_dim, num_classes)
         )
 
     def forward(self, x):
         logits = self.mlp(x)
         return logits, {"features": {}}
+
+class MLP_flatten(nn.Module):
+    def __init__(self, input_size, temporal_dim, hidden_dim, num_classes):
+        super(MLP_flatten, self).__init__()
+        self.input_size = input_size * temporal_dim
+        self.mlp = nn.Sequential(
+            nn.Linear(self.input_size, hidden_dim),
+            nn.Linear(hidden_dim, num_classes)
+        )
+
+    def forward(self, x):
+        x = x.reshape(-1, self.input_size)
+        logits = self.mlp(x)
+        return logits, {"features": {}}
+
+class MLP_avg_pooling(nn.Module):
+    def __init__(self, input_shape, temporal_dim, hidden_dim, num_classes):
+        super(MLP_avg_pooling, self).__init__()
+        self.temporal_dim = temporal_dim
+        self.channels = input_shape
+        
+        # Average pooling layer to reduce temporal dimension
+        self.avg_pool = nn.AdaptiveAvgPool1d(1)
+        
+        # Linear layers
+        self.mlp = nn.Sequential(
+            nn.Linear(self.channels, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, num_classes)
+        )
+
+    def forward(self, x):
+        # x.shape should be (batch_size, temporal_dim, channels)
+        x = x.permute(0, 2, 1)  # Change shape to (batch_size, channels, temporal_dim)
+        x = self.avg_pool(x)    # Apply average pooling
+        x = x.squeeze(-1)       # Remove the temporal dimension
+        x = self.mlp(x)         # Pass through MLP
+        return x, {"features": {}}
+
+class MLP_max_pooling(nn.Module):
+    def __init__(self, input_shape, temporal_dim, hidden_dim, num_classes):
+        super(MLP_max_pooling, self).__init__()
+        self.temporal_dim = temporal_dim
+        self.channels = input_shape
+        
+        # Max pooling layer to reduce temporal dimension
+        self.max_pool = nn.AdaptiveMaxPool1d(1)
+        
+        # Linear layers
+        self.mlp = nn.Sequential(
+            nn.Linear(self.channels, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, num_classes)
+        )
+
+    def forward(self, x):
+        # x.shape should be (batch_size, temporal_dim, channels)
+        x = x.permute(0, 2, 1)  # Change shape to (batch_size, channels, temporal_dim)
+        x = self.max_pool(x)    # Apply average pooling
+        x = x.squeeze(-1)       # Remove the temporal dimension
+        x = self.mlp(x)         # Pass through MLP
+        return x, {"features": {}}
     
 class LSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
@@ -30,6 +93,49 @@ class LSTM(nn.Module):
         feat = out[:, -1, :]  # Take the output of the last time step
         out = self.fc(feat)
         return out, {"features": feat}
+    
+class LSTM_other_single_clip(nn.Module):
+    def __init__(self, num_classes, batch_size): #* aggiusta i parametri, ad es. passa la batch come arg
+        super(LSTM_other_single_clip, self).__init__()
+        self.input_size = 1024
+        self.lstm_hidden_size = 512
+        self.num_layers = 2
+        self.batch_size = batch_size
+        self.lstm = nn.LSTM(self.input_size, self.lstm_hidden_size, self.num_layers, 
+                            bias=True, batch_first=True, dropout=0.5, bidirectional=False, 
+                            proj_size=0, device=None, dtype=None)
+        self.fc = nn.Linear(self.lstm_hidden_size, num_classes)
+
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
+        x = x.unsqueeze(1)
+        out, _ = self.lstm(x, (h0, c0))
+        feat = out.view(-1, self.lstm_hidden_size)
+        logits = self.fc(feat)
+
+        return logits, {"features": feat}
+    
+class LSTM_other(nn.Module):
+    def __init__(self, num_classes, batch_size): #* aggiusta i parametri, ad es. passa la batch come arg
+        super(LSTM_other, self).__init__()
+        self.input_size = 1024
+        self.lstm_hidden_size = 512
+        self.num_layers = 2
+        self.batch_size = batch_size
+        self.lstm = nn.LSTM(self.input_size, self.lstm_hidden_size, self.num_layers, 
+                            bias=True, batch_first=True, dropout=0.5, bidirectional=False, 
+                            proj_size=0, device=None, dtype=None)
+        self.fc = nn.Linear(self.lstm_hidden_size, num_classes)
+
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
+        out, _ = self.lstm(x, (h0, c0))
+        feat = out = out[:, -1, :]
+        logits = self.fc(feat)
+
+        return logits, {"features": feat}
     
 class AttentionLayer(nn.Module):
     def __init__(self, input_dim):
@@ -162,6 +268,118 @@ class TemporalFusionTransformer(nn.Module):
         feat = x[-1, :, :]  # Take the last time step output
         x = self.fc(feat)
         return x, {'features': feat}
+    
+class TemporalBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, dilation, dropout=0.2):
+        super(TemporalBlock, self).__init__()
+        padding = (kernel_size - 1) * dilation
+        
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size, 
+                               padding=padding, dilation=dilation)
+        self.bn1 = nn.BatchNorm1d(out_channels)
+        self.dropout1 = nn.Dropout(dropout)
+        
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size, 
+                               padding=padding, dilation=dilation)
+        self.bn2 = nn.BatchNorm1d(out_channels)
+        self.dropout2 = nn.Dropout(dropout)
+        
+        self.downsample = nn.Conv1d(in_channels, out_channels, 1) if in_channels != out_channels else None
+        self.relu = nn.ReLU()
+        
+    def forward(self, x):
+        residual = x
+        
+        x = self.conv1(x)
+        x = x[:, :, :-self.conv1.padding[0]]  # Remove extra padding
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.dropout1(x)
+        
+        x = self.conv2(x)
+        x = x[:, :, :-self.conv2.padding[0]]  # Remove extra padding
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.dropout2(x)
+        
+        if self.downsample is not None:
+            residual = self.downsample(residual)
+            residual = residual[:, :, -x.size(2):]  # Match the size of x
+        
+        return self.relu(x + residual)
+
+class TemporalConvNet_2(nn.Module):
+    def __init__(self, num_inputs, num_channels, num_classes, kernel_size=2, dropout=0.2):
+        super(TemporalConvNet_2, self).__init__()
+        layers = []
+        num_levels = len(num_channels)
+        for i in range(num_levels):
+            dilation_size = 2 ** i
+            in_channels = num_inputs if i == 0 else num_channels[i-1]
+            out_channels = num_channels[i]
+            layers.append(TemporalBlock(in_channels, out_channels, kernel_size, dilation=dilation_size, dropout=dropout))
+        
+        self.network = nn.Sequential(*layers)
+        self.fc = nn.Linear(num_channels[-1], num_classes)  # Final fully connected layer
+
+    def forward(self, x):
+        x = x.transpose(1, 2)
+        x = self.network(x)
+        feat = x.mean(dim=2)  # Global average pooling over the temporal dimension
+        x = self.fc(feat)
+        return x, {'features': feat}
+    
+class TRN(nn.Module):
+    def __init__(self, input_dim, temporal_dim, hidden_dim, num_classes, relation_type='pairwise'):
+        super(TRN, self).__init__()
+        self.temporal_dim = temporal_dim
+        self.channels = input_dim
+        self.relation_type = relation_type
+        
+        # Linear layer to process each frame independently
+        self.frame_fc = nn.Linear(self.channels, hidden_dim)
+        
+        # Relation layer to combine information from multiple frames
+        if self.relation_type == 'pairwise':
+            self.relation_fc = nn.Linear(2 * hidden_dim, hidden_dim)
+        elif self.relation_type == 'triple':
+            self.relation_fc = nn.Linear(3 * hidden_dim, hidden_dim)
+        else:
+            raise ValueError("Unsupported relation type. Use 'pairwise' or 'triple'.")
+        
+        # Final classification layer
+        self.classifier = nn.Linear(hidden_dim, num_classes)
+    
+    def forward(self, x):
+        batch_size = x.size(0)
+        temporal_dim = x.size(1)
+        
+        # Process each frame independently
+        x = self.frame_fc(x)  # Shape: (batch_size, temporal_dim, hidden_dim)
+        
+        # Compute pairwise or triple relations
+        if self.relation_type == 'pairwise':
+            relations = []
+            for i, j in itertools.combinations(range(temporal_dim), 2):
+                relation = torch.cat((x[:, i, :], x[:, j, :]), dim=-1)
+                relation = self.relation_fc(relation)
+                relations.append(relation)
+            relations = torch.stack(relations, dim=1)
+        elif self.relation_type == 'triple':
+            relations = []
+            for i, j, k in itertools.combinations(range(temporal_dim), 3):
+                relation = torch.cat((x[:, i, :], x[:, j, :], x[:, k, :]), dim=-1)
+                relation = self.relation_fc(relation)
+                relations.append(relation)
+            relations = torch.stack(relations, dim=1)
+        
+        # Pool over the computed relations
+        relations = relations.mean(dim=1)  # Shape: (batch_size, hidden_dim)
+        
+        # Final classification
+        logits = self.classifier(relations)
+        
+        return logits, {"features": relations}
 
 class Classifier(nn.Module):
     def __init__(self, num_classes):

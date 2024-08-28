@@ -1,6 +1,6 @@
 import logging
 import coloredlogs
-from utils.args import args
+from .args import args
 import sys
 import os
 import shutil

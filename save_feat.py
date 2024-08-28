@@ -92,18 +92,17 @@ def save_feat(model, loader, device, it, num_classes):
 
     model.reset_acc()
     model.train(False)
-    results_dict = {"features": []}
+    results_dict = {"features": [], "central_frames": []}
     num_samples = 0
     logits = {}
     features = {}
     # Iterate over the models
     with torch.no_grad():
-        for i_val, (data, label, video_name, uid) in enumerate(loader):
+        for i_val, (data, label, video_name, uid, central_frames) in enumerate(loader):
             label = label.to(device)
 
             for m in modalities:
                 batch, _, height, width = data[m].shape
-                #logger.info(data[m].shape)
                 data[m] = data[m].reshape(batch, args.save.num_clips, args.save.num_frames_per_clip[m], -1, height, width)
                 data[m] = data[m].permute(1, 0, 3, 2, 4, 5)
 
@@ -127,6 +126,11 @@ def save_feat(model, loader, device, it, num_classes):
                 for m in modalities:
                     sample["features_" + m] = features[m][:, i].cpu().detach().numpy()
                 results_dict["features"].append(sample)
+                #print(len(video_name))
+                #print(video_name)
+                #print(len(central_frames))
+                #print(central_frames)
+                results_dict["central_frames"].append(f"ek_data/frames/{video_name[i]}/{video_name[i]}/img_{str(central_frames[i].item()).zfill(10)}.jpg")
             num_samples += batch
 
             model.compute_accuracy(logits, label)
@@ -136,10 +140,8 @@ def save_feat(model, loader, device, it, num_classes):
                                                                           model.accuracy.avg[1], model.accuracy.avg[5]))
 
         os.makedirs("saved_features", exist_ok=True)
-        pickle.dump(results_dict, open(os.path.join("saved_features", args.name + "_" +
-                                                    args.dataset.shift.split("-")[1] + "_" +
-                                                    args.split + ".pkl"), 'wb'))
-        logger.info(f"features dumped with shape: ({len(results_dict['features'])}, {len(results_dict['features'][0])})")
+        pickle.dump(results_dict, open(os.path.join("saved_features", args.name + ".pkl"), 'wb'))
+        logger.info(f"features dumped with shape: ({len(results_dict['features'])}, {len(results_dict['features'][0])}) to {os.path.join('saved_features', args.name + '.pkl')}")
 
         class_accuracies = [(x / y) * 100 for x, y in zip(model.accuracy.correct, model.accuracy.total)]
         logger.info('Final accuracy: top1 = %.2f%%\ttop5 = %.2f%%' % (model.accuracy.avg[1],
