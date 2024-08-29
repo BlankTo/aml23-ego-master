@@ -211,7 +211,9 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                     action_classifier.backward(retain_graph=False)
                     action_classifier.compute_accuracy(logits, source_label)
 
-        else: exit()
+        else:
+            print('model not prepared in train_classifier')
+            exit()
 
         ########
 
@@ -310,7 +312,9 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                         for m in modalities:
                             logits[m] = torch.mean(logits[m], dim=0)
 
-                else: exit()
+                else:
+                    print('model not prepared in train_classifier')
+                    exit()
 
             model.compute_accuracy(logits, label)
 

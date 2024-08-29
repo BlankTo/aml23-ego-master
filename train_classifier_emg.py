@@ -4,7 +4,7 @@ from utils.logger import logger, clean_false_log
 import torch.nn.parallel
 import torch.optim
 import torch
-from utils.loaders import EpicKitchensDataset, EMGDataset
+from utils.loaders import EpicKitchensDataset, ActionNetDataset
 from utils.args import args
 from utils.utils import pformat_dict
 import utils
@@ -20,6 +20,7 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
+emg_models = ["LSTM_emg"]
 temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2"]
 other_models = ["MLP_single_clip"]
 
@@ -61,14 +62,14 @@ def main():
         # In our case it represents the feature dimensionality which is equivalent to 1024 for I3D
         #models[m] = getattr(model_list, args.models[m].model)()
 
-        print(args)
-
         match args.models[m].model:
             case "MLP_single_clip":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
             case "MLP_flatten":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
             case "LSTM":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
+            case "LSTM_emg":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
             case "AttentionClassifier":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
@@ -102,14 +103,14 @@ def main():
         # notice, here it is multiplied by tot_batch/batch_size since gradient accumulation technique is adopted
         training_iterations = args.train.num_iter * (args.total_batch // args.batch_size)
         # all dataloaders are generated here
-        train_loader = torch.utils.data.DataLoader(EMGDataset(args.dataset.shift.split("-")[0], modalities,
-                                                                       'train', args.dataset, None, None, None,
+        train_loader = torch.utils.data.DataLoader(ActionNetDataset(modalities,
+                                                                       'train', args.dataset,
                                                                        None, load_feat= True),
                                                    batch_size=args.batch_size, shuffle=True,
                                                    num_workers=args.dataset.workers, pin_memory=True, drop_last=True)
 
-        val_loader = torch.utils.data.DataLoader(EMGDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, None, None, None,
+        val_loader = torch.utils.data.DataLoader(ActionNetDataset(modalities,
+                                                                     'val', args.dataset,
                                                                      None, load_feat= True),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
@@ -118,8 +119,8 @@ def main():
     elif args.action == "validate":
         if args.resume_from is not None:
             action_classifier.load_last_model(args.resume_from)
-        val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, None, None, None,
+        val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(modalities,
+                                                                     'val', args.dataset,
                                                                      None, load_feat=True),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
@@ -188,6 +189,19 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                 action_classifier.backward(retain_graph=False)
                 action_classifier.compute_accuracy(logits, source_label)
 
+        elif model_name in emg_models:
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
         elif model_name in other_models:
 
                 source_label = source_label.to(device)
@@ -203,7 +217,9 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                     action_classifier.backward(retain_graph=False)
                     action_classifier.compute_accuracy(logits, source_label)
 
-        else: exit()
+        else:
+            print('model not prepared in train_classifier_emg')
+            exit()
 
         ########
 
@@ -286,6 +302,16 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                             for m in modalities:
                                 logits[m] = output[m]
 
+                elif model_name in emg_models:
+                        
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                        for m in modalities:
+                            output, _ = model(data)
+                            #print(f"output_:{output[m].shape}")
+                            for m in modalities:
+                                logits[m] = output[m]
+
                 elif model_name in other_models:
                         
                         logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
@@ -302,25 +328,40 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                         for m in modalities:
                             logits[m] = torch.mean(logits[m], dim=0)
 
-                else: exit()
+                else:
+                    print('model not prepared in train_classifier_emg')
+                    exit()
 
             model.compute_accuracy(logits, label)
 
             if (i_val + 1) % (len(val_loader) // 5) == 0:
                 logger.info("[{}/{}] top1= {:.3f}% top5 = {:.3f}%".format(i_val + 1, len(val_loader),
                                                                           model.accuracy.avg[1], model.accuracy.avg[5]))
-
-        class_accuracies = [(x / y) * 100 for x, y in zip(model.accuracy.correct, model.accuracy.total)]
+                
+        class_accuracies = [(x / y) * 100 if y != 0 else None for x, y in zip(model.accuracy.correct, model.accuracy.total)]
         logger.info('Final accuracy: top1 = %.2f%%\ttop5 = %.2f%%' % (model.accuracy.avg[1],
                                                                       model.accuracy.avg[5]))
         for i_class, class_acc in enumerate(class_accuracies):
-            logger.info('Class %d = [%d/%d] = %.2f%%' % (i_class,
-                                                         int(model.accuracy.correct[i_class]),
-                                                         int(model.accuracy.total[i_class]),
-                                                         class_acc))
+            if class_acc is not None:
+                logger.info('Class %d = [%d/%d] = %.2f%%' % (i_class,
+                                                            int(model.accuracy.correct[i_class]),
+                                                            int(model.accuracy.total[i_class]),
+                                                            class_acc))
+            else:
+                logger.info('Class %d = [%d/%d] = None' % (i_class,
+                                                            int(model.accuracy.correct[i_class]),
+                                                            int(model.accuracy.total[i_class])))
 
-    logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'
-                .format(np.array(class_accuracies).mean(axis=0)))
+
+    if None in class_accuracies:
+        summ = 0
+        count = 0
+        for i_class, class_acc in enumerate(class_accuracies):
+            if class_acc is not None:
+                summ += class_acc
+                count += 1
+        logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'.format(summ / count))
+    else: logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'.format(np.array(class_accuracies).mean(axis=0)))
     test_results = {'top1': model.accuracy.avg[1], 'top5': model.accuracy.avg[5],
                     'class_accuracies': np.array(class_accuracies)}
 

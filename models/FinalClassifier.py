@@ -87,6 +87,23 @@ class LSTM(nn.Module):
         self.num_layers = num_layers
     
     def forward(self, x):
+        print(x.shape)
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
+        out, _ = self.lstm(x, (h_0, c_0))
+        feat = out[:, -1, :]  # Take the output of the last time step
+        out = self.fc(feat)
+        return out, {"features": feat}
+    
+class LSTM_emg(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
+        super(LSTM_emg, self).__init__()
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, num_classes)
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+    
+    def forward(self, x):
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
         out, _ = self.lstm(x, (h_0, c_0))

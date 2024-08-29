@@ -1,31 +1,22 @@
 import os
 import math
 import torch
+import pickle
 import numpy as np
 import pandas as pd
 import random as rand
 from scipy.signal import butter, filtfilt
+from sklearn.model_selection import train_test_split
+
+from spec_emg import compute_spectrogram
 
 def pkl_to_pd(pkl_file_path):
     with open(pkl_file_path, "rb") as pkl_file:
         data = pd.read_pickle(pkl_file)
     return data
 
-label_dict = {}
-
 fps = 30
 clip_duration = 5
-
-labels = []
-
-labels_remapping = {}
-
-uid = rand.randint(0, 20000)
-dataset = []
-dataset_reduced = []
-dataset_emg = []
-timestamps = []
-timestamps_int = []
 
 dataset_folder = "action-net/action_net_dataset"
 
@@ -75,6 +66,101 @@ for pkl_file in os.listdir(dataset_folder):
 
         sample_duration = int(record["stop_timestamp"] - record["start_timestamp"])
         if sample_duration < (clip_duration * 2):
+
+            ##
+
+            record['uid'] = uid
+            uid += 1
+
+            left_readings = []
+            for i in range(len(record["myo_left_timestamps"])):
+                ts = record["myo_left_timestamps"][i]
+                if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
+                    left_readings.append(record["myo_left_readings"][i])
+
+            if len(left_readings) > 750:
+                i = math.ceil(750 * 10 / len(left_readings))
+                value = 750 * (10 / i)
+                r_cp = []
+                for k in range(0, int(value), 10):
+                    r_cp.extend(left_readings[k : k + i])
+                r_cp = r_cp[:750]
+                left_readings = np.array(r_cp)
+
+            elif len(left_readings) < 750:
+                new_rows = np.zeros((750 - len(left_readings), 8))
+                left_readings = np.concatenate((left_readings, new_rows), axis=0)
+
+            left_readings_rectified = np.abs(left_readings)
+            fs = 160
+            f_cutoff = 5
+            order = 4
+            b, a = butter(order, f_cutoff / (fs / 2), btype= 'low')
+            left_readings_filtered = np.zeros_like(left_readings_rectified, dtype= float)
+            for i in range(8):
+                left_readings_filtered[:, i] = filtfilt(b, a, left_readings_rectified[:, i])
+
+            left_readings_filtered = torch.tensor(left_readings_filtered, dtype= torch.float32)
+            
+            min_val, _ = torch.min(left_readings_filtered, dim=1, keepdim=True)
+            max_val, _ = torch.max(left_readings_filtered, dim=1, keepdim=True)
+
+            g = max_val - min_val + 0.0001
+
+            normalized_left_readings = 2 * (left_readings_filtered - min_val) / g - 1
+
+            record["myo_left_readings"] = normalized_left_readings
+
+            ##
+
+            #right_readings = []
+            #for i in range(len(record["myo_right_timestamps"])):
+            #    ts = record["myo_right_timestamps"][i]
+            #    if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
+            #        right_readings.append(record["myo_right_readings"][i])
+            #clip["myo_right_readings"] = right_readings
+
+            right_readings = []
+            for i in range(len(record["myo_right_timestamps"])):
+                ts = record["myo_right_timestamps"][i]
+                if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
+                    right_readings.append(record["myo_right_readings"][i])
+
+            if len(right_readings) > 750:
+                i = math.ceil(750 * 10 / len(right_readings))
+                value = 750 * (10 / i)
+                r_cp = []
+                for k in range(0, int(value), 10):
+                    r_cp.extend(right_readings[k : k + i])
+                r_cp = r_cp[:750]
+                right_readings = np.array(r_cp)
+
+            elif len(right_readings) < 750:
+                new_rows = np.zeros((750 - len(right_readings), 8))
+                right_readings = np.concatenate((right_readings, new_rows), axis=0)
+
+            right_readings_rectified = np.abs(right_readings)
+            fs = 160
+            f_cutoff = 5
+            order = 4
+            b, a = butter(order, f_cutoff / (fs / 2), btype= 'low')
+            right_readings_filtered = np.zeros_like(right_readings_rectified, dtype= float)
+            for i in range(8):
+                right_readings_filtered[:, i] = filtfilt(b, a, right_readings_rectified[:, i])
+
+            right_readings_filtered = torch.tensor(right_readings_filtered, dtype= torch.float32)
+            
+            min_val, _ = torch.min(right_readings_filtered, dim=1, keepdim=True)
+            max_val, _ = torch.max(right_readings_filtered, dim=1, keepdim=True)
+
+            g = max_val - min_val + 0.0001
+
+            normalized_right_readings = 2 * (right_readings_filtered - min_val) / g - 1
+
+            record["myo_right_readings"] = normalized_right_readings
+
+            ##
+
             records = [record]
         else:
             records = []
@@ -100,12 +186,7 @@ for pkl_file in os.listdir(dataset_folder):
                 if clip_start + clip_duration < sample_duration:
                     clip['stop_timestamp'] = record['stop_timestamp']
 
-                #left_readings = []
-                #for i in range(len(record["myo_left_timestamps"])):
-                #    ts = record["myo_left_timestamps"][i]
-                #    if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
-                #        left_readings.append(record["myo_left_readings"][i])
-                #clip["myo_left_readings"] = left_readings
+                ##
 
                 left_readings = []
                 for i in range(len(record["myo_left_timestamps"])):
@@ -120,7 +201,7 @@ for pkl_file in os.listdir(dataset_folder):
                     for k in range(0, int(value), 10):
                         r_cp.extend(left_readings[k : k + i])
                     r_cp = r_cp[:750]
-                    left_readings = r_cp
+                    left_readings = np.array(r_cp)
 
                 elif len(left_readings) < 750:
                     new_rows = np.zeros((750 - len(left_readings), 8))
@@ -148,13 +229,6 @@ for pkl_file in os.listdir(dataset_folder):
 
                 ##
 
-                #right_readings = []
-                #for i in range(len(record["myo_right_timestamps"])):
-                #    ts = record["myo_right_timestamps"][i]
-                #    if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
-                #        right_readings.append(record["myo_right_readings"][i])
-                #clip["myo_right_readings"] = right_readings
-
                 right_readings = []
                 for i in range(len(record["myo_right_timestamps"])):
                     ts = record["myo_right_timestamps"][i]
@@ -168,7 +242,7 @@ for pkl_file in os.listdir(dataset_folder):
                     for k in range(0, int(value), 10):
                         r_cp.extend(right_readings[k : k + i])
                     r_cp = r_cp[:750]
-                    right_readings = r_cp
+                    right_readings = np.array(r_cp)
 
                 elif len(right_readings) < 750:
                     new_rows = np.zeros((750 - len(right_readings), 8))
@@ -198,104 +272,57 @@ for pkl_file in os.listdir(dataset_folder):
 
                 records.append(clip)
 
-
-        ## data aug
-
         if data is None:
             data = pd.DataFrame(records)
         else:
             data = pd.concat([data, pd.DataFrame(records)], ignore_index=True)
+
+label_set = set(data['verb_class'].to_list())
+label_dict = {lab: i for i, lab in enumerate(label_set)}
+print(label_dict)
+labels = []
+for index, row in data.iterrows():
+    labels.append(label_dict[row['verb_class']])
+data['label'] = labels
+
+left_spectrograms = []
+right_spectrograms = []
+for i in range(len(data)):
+    print(f'\r{i+1}/{len(data)}', end='', flush=True)
+    left_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_left_readings"]))
+    right_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_right_readings"]))
+
+data['left_spectrogram'] = left_spectrograms
+data['right_spectrogram'] = right_spectrograms
+
 
 print(data.shape)
 print(data.columns)
 print(set(data['verb_class'].to_list()))
 print(len(set(data['verb_class'].to_list())))
 
-rgb_data = data[['uid', 'verb', 'verb_class', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
-emg_data = data[['uid', 'verb', 'verb_class', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
+print(data.iloc[0]['myo_left_readings'].shape)
+print(data.iloc[0]['myo_right_readings'].shape)
+
+train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
+
+rgb_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
+with open('train_val/actionRGB_train.pkl', 'wb') as out_file:
+    pickle.dump(rgb_train_data, out_file)
+
+rgb_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
+with open('train_val/actionRGB_test.pkl', 'wb') as out_file:
+    pickle.dump(rgb_test_data, out_file)
+
+emg_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
+with open('saved_features/actionEMG_train.pkl', 'wb') as out_file:
+    pickle.dump(emg_train_data, out_file)
+
+emg_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
+print(emg_test_data.columns)
+with open('saved_features/actionEMG_test.pkl', 'wb') as out_file:
+    pickle.dump(emg_test_data, out_file)
 
 
-left_spectrograms = []
-right_spectrograms = []
-for i in range(len(data)):
-    left_spectrograms.append(compute_spectrogram(data[i]["left_readings"]))
-    right_spectrograms.append(compute_spectrogram(data[i]["right_readings"]))
-
-exit()
-
-#TODO why this sampling?
-
-for i in range(len(myo_data)):
-    right_readings = myo_data[i]["right_readings"]
-
-    if len(right_readings) > 750:
-        i = math.ceil(750 * 10 / len(right_readings))
-        value = 750 * (10 / i)
-        r_cp = []
-        for k in range(0, int(value), 10):
-            r_cp.extend(right_readings[k : k + i])
-        r_cp = r_cp[:750]
-        right_readings = r_cp
-
-    elif len(right_readings) < 750:
-        new_rows = np.zeros((750 - len(right_readings), 8))
-        right_readings = np.concatenate((right_readings, new_rows), axis=0)
-
-    right_readings_rectified = np.abs(right_readings)
-    fs = 160
-    f_cutoff = 5
-    order = 4
-    b, a = butter(order, f_cutoff / (fs / 2), btype= 'low')
-    right_readings_filtered = np.zeros_like(right_readings_rectified, dtype= float)
-    for i in range(8):
-        right_readings_filtered[:, i] = filtfilt(b, a, right_readings_rectified[:, i])
-
-    right_readings_filtered = torch.tensor(right_readings_filtered, dtype= torch.float32)
-    
-    min_val, _ = torch.min(right_readings_filtered, dim=1, keepdim=True)
-    max_val, _ = torch.max(right_readings_filtered, dim=1, keepdim=True)
-
-    g = max_val - min_val + 0.0001
-
-    normalized_right_readings = 2 * (right_readings_filtered - min_val) / g - 1
-
-    myo_data[i]["right_readings"] = normalized_right_readings
-
-for i in range(len(myo_data)):
-    left_readings = myo_data[i]["left_readings"]
-
-    if len(left_readings) > 750:
-        i = math.ceil(750 * 10 / len(left_readings))
-        value = 750 * (10 / i)
-        r_cp = []
-        for k in range(0, int(value), 10):
-            r_cp.extend(left_readings[k : k + i])
-        r_cp = r_cp[:750]
-        left_readings = r_cp
-
-    elif len(left_readings) < 750:
-        new_rows = np.zeros((750 - len(left_readings), 8))
-        left_readings = np.concatenate((left_readings, new_rows), axis=0)
-
-    ##
-    left_readings_rectified = np.abs(left_readings)
-    fs = 160
-    f_cutoff = 5
-    order = 4
-    b, a = butter(order, f_cutoff / (fs / 2), btype= 'low')
-    left_readings_filtered = np.zeros_like(left_readings_rectified, dtype= float)
-    for i in range(8):
-        left_readings_filtered[:, i] = filtfilt(b, a, left_readings_rectified[:, i])
-
-    left_readings_filtered = torch.tensor(left_readings_filtered, dtype= torch.float32)
-    
-    min_val, _ = torch.min(left_readings_filtered, dim=1, keepdim=True)
-    max_val, _ = torch.max(left_readings_filtered, dim=1, keepdim=True)
-
-    g = max_val - min_val + 0.0001
-
-    normalized_left_readings = 2 * (left_readings_filtered - min_val) / g - 1
-
-    myo_data[i]["left_readings"] = normalized_left_readings
-
-emg_dataset = pd.DataFrame(emg_data)
+#with open('saved_features/EMG_train', 'wb') as out_file:
+#    pickle.dump(out_file)

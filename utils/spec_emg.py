@@ -1,19 +1,7 @@
 import torch
-from .logger import logger
 import torch
-import torchaudio.functional as F
 import torchaudio.transforms as T
-import glob
-from abc import ABC
-import pandas as pd
-from .epic_record import EpicVideoRecord
-from .emg_record import ActionEMGRecord
 import torch
-import torch.utils.data as data
-import torch.nn.functional as F
-from PIL import Image
-import os
-import os.path
 import numpy as np
 from scipy.signal import butter, filtfilt
 
@@ -80,6 +68,7 @@ def preprocess(readings):
 
 
 def compute_spectrogram(readings):
+
     # Sampling frequency is 160 Hz
     # With 32 samples the frequency resolution after FFT is 160 / 32
     n_fft = 32

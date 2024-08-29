@@ -334,10 +334,10 @@ class EpicKitchensDataset(data.Dataset, ABC):
     def __len__(self):
         return len(self.video_list)
 
-
-class EMGDataset(data.Dataset, ABC):
-    def __init__(self, split, modalities, mode, dataset_conf, num_frames_per_clip, num_clips, dense_sampling,
+class ActionNetDataset(data.Dataset, ABC):
+    def __init__(self, modalities, mode, dataset_conf,
                  transform=None, load_feat=False, additional_info=False, **kwargs):
+
         """
         split: str (D1, D2 or D3)
         modalities: list(str, str, ...)
@@ -359,84 +359,26 @@ class EMGDataset(data.Dataset, ABC):
         self.modalities = modalities  # considered modalities (ex. [RGB, Flow, Spec, Event])
         self.mode = mode  # 'train', 'val' or 'test'
         self.dataset_conf = dataset_conf
-        self.num_frames_per_clip = num_frames_per_clip
-        self.dense_sampling = dense_sampling
-        self.num_clips = num_clips
-        self.stride = self.dataset_conf.stride
         self.additional_info = additional_info
 
-        if self.mode == "train":
-            pickle_name = "D4_train.pkl"
-        elif kwargs.get('save', None) is not None:
-            pickle_name = split + "_" + kwargs["save"] + ".pkl"
-        else:
-            pickle_name = "D4_test.pkl"
+        if self.mode == "train": emg_name = "actionEMG_train.pkl"
+        else: emg_name = "actionEMG_test.pkl"
 
-        self.list_file = pd.read_pickle(os.path.join(self.dataset_conf.annotations_path, pickle_name))
-        logger.info(f"Dataloader for {split}-{self.mode} with {len(self.list_file)} samples generated")
-        self.video_list = [ActionEMGRecord(tup[1], self.dataset_conf) for tup in self.list_file.iterrows()]
+        #self.video_list = pd.read_pickle(os.path.join('train_val', rgb_name))
+        self.list_file = pd.read_pickle(os.path.join('saved_features', emg_name))
+        logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")
 
-
-    def _preprocess(self, readings):
-        #* apply preprocessing to the EMG data
-
-        #* Rectification
-        # abs value
-        readings_rectified = np.abs(readings)
-        #* low-pass Filter
-        # Frequenza di campionamento (Hz)
-        fs = 160  # Frequenza dei sampling data da loro
-        f_cutoff = 5  # Frequenza di taglio
-
-        # Ordine del filtro
-        order = 4 
-        # Calcolo dei coefficienti del filtro
-        b, a = butter(order, f_cutoff / (fs / 2), btype='low')
-        # Concateno tutti i vettori in un'unica matrice
-        readings_filtered = np.zeros_like(readings_rectified, dtype=float)
-        for i in range(8):  # 8 colonne
-            readings_filtered[:, i] = filtfilt(b, a, readings_rectified[:, i])
-
-        #print(readings_rectified[:6], readings_rectified.shape)
-        #print(readings_filtered[:6], readings_filtered.shape)
-        # exit()
-
-        # convert to tensor
-        readings_filtered = torch.tensor(readings_filtered, dtype=torch.float32)
-        
-        min_val, _ = torch.min(readings_filtered, dim=1, keepdim=True)
-        max_val, _ = torch.max(readings_filtered, dim=1, keepdim=True)
-
-        g = max_val - min_val + 0.0001
-
-        # # Normalize the data to the range -1 to 1
-        normalized_data = 2 * (readings_filtered - min_val) / g - 1
-
-        #print(normalized_data[:6], normalized_data.shape)
-
-
-        return normalized_data
+        self.emg_list = [ActionEMGRecord(self.list_file.iloc[i], self.dataset_conf) for i in range(len(self.list_file))]
 
     def __getitem__(self, index):
-        # record is a row of the pkl file containing one sample/action
-        # notice that it is already converted into a EpicVideoRecord object so that here you can access
-        # all the properties of the sample easily
 
-        record = self.emg_list[index]
+        record_emg = self.emg_list[index]
+        label_emg = record_emg.label
+        left_readings = record_emg.myo_left_readings
+        right_readings = record_emg.myo_right_readings
+        features_emg = torch.cat((left_readings, right_readings), dim=1)
 
-        if self.conv:
-            left_readings = record.myo_left_readings
-            right_readings = record.myo_right_readings
-            sample = (np.concatenate((left_readings, right_readings), axis=0))
-        else:
-            left_readings = self._preprocess(record.myo_left_readings)
-            right_readings = self._preprocess(record.myo_right_readings)
-            sample = (np.concatenate((left_readings, right_readings), axis=1))
+        return {"EMG": features_emg}, torch.tensor(label_emg)
 
-        sample = torch.tensor(sample, dtype=torch.float32)
-        label = torch.tensor(record.label)
-        out = {"EMG": sample.unsqueeze(0)} 
-        return out, label
-    
     def __len__(self):
         return len(self.emg_list)
