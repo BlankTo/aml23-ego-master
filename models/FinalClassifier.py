@@ -140,6 +140,7 @@ class LSTM_emg(nn.Module):
         feat = out[:, -1, :]  # Take the output of the last time step
         out = self.fc(feat)
         return out, {"features": feat}
+
     
 class LSTM_other_single_clip(nn.Module):
     def __init__(self, num_classes, batch_size): #* aggiusta i parametri, ad es. passa la batch come arg

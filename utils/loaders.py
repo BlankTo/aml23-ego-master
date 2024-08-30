@@ -361,8 +361,8 @@ class ActionNetDataset(data.Dataset, ABC):
         self.dataset_conf = dataset_conf
         self.additional_info = additional_info
 
-        if self.mode == "train": emg_name = "actionEMG_train.pkl"
-        else: emg_name = "actionEMG_test.pkl"
+        if self.mode == "train": emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_train.pkl"
+        else: emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_test.pkl"
 
         #self.video_list = pd.read_pickle(os.path.join('train_val', rgb_name))
         self.list_file = pd.read_pickle(os.path.join('saved_features', emg_name))
@@ -410,8 +410,8 @@ class ActionNetSpectrogramDataset(data.Dataset, ABC):
         self.dataset_conf = dataset_conf
         self.additional_info = additional_info
 
-        if self.mode == "train": spec_name = "actionEMGspec_train.pkl"
-        else: spec_name = "actionEMGspec_test.pkl"
+        if self.mode == "train": spec_name = f"action_{dataset_conf.emg_clip_duration}s_EMGspec_train.pkl"
+        else: spec_name = f"action_{dataset_conf.emg_clip_duration}s_EMGspec_test.pkl"
 
         self.list_file = pd.read_pickle(os.path.join('saved_features', spec_name))
         logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")

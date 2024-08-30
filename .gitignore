@@ -25,3 +25,5 @@ prova.py
 action_net/ActionNet_test.csv
 action_net/ActionNet_train.csv
 /utils/__pycache__
+/train_val
+/train_val

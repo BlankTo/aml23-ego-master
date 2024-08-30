@@ -1,5 +1,5 @@
 action: train # train or test
-name: LSTM_emg # name of the experiment needed for the logs
+name: LSTM_10s_emg_base_action # name of the experiment needed for the logs
 modality: ['EMG'] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
@@ -38,11 +38,14 @@ dataset:
     features_name: RGB_5_dense
   Event: # not neeeded for the project
     rgb4e: 6
+  emg_clip_duration: 10
+  num_classes: 21
+  label_type: 'action'
 
 # these are the action recognition models for each modality
 models:
   EMG:
-    model: LSTM_emg
+    model: LSTM_emg_base
     normalize: False
     kwargs: {}
     lr_steps: 3000

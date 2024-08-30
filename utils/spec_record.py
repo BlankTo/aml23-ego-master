@@ -17,4 +17,7 @@ class ActionEMGspecRecord(object):
 
     @property
     def label(self):
+        try:
+            if self.dataset_conf.label_type == 'action': return self._series['action_label']
+        except: pass
         return self._series['label']
