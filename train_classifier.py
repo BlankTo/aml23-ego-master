@@ -89,7 +89,7 @@ def main():
             case "MLP_max_pooling":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
             case "TRN":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
             case "LSTM_other":
                 models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
             case "LSTM_other_single_clip":

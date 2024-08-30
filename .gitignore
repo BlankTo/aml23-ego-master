@@ -21,7 +21,7 @@ prova.py
 /Experiment_logs
 /extracted_feature_analysis/__pycache__
 /utils/__pycache__
-/action-net/action_net_dataset
-action-net/ActionNet_test.csv
-action-net/ActionNet_train.csv
+/action_net/action_net_dataset
+action_net/ActionNet_test.csv
+action_net/ActionNet_train.csv
 /utils/__pycache__

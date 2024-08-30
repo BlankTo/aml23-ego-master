@@ -214,7 +214,7 @@ def emg_dataset(path, out_path):
         file = actionNet_train.iloc[i].file
         label = actionNet_train.iloc[i].description
 
-        file_pkl = pkl_to_pd("action-net/action_net_dataset/" + file)
+        file_pkl = pkl_to_pd("action_net/action_net_dataset/" + file)
         row = file_pkl.loc[index]
         first_frame = float(file_pkl.loc[0]["start"])
         record = generate_record(uid_offset, row, first_frame, 1, True)
@@ -312,7 +312,7 @@ def emg_dataset_spettrogram(path, out_path):
         dataset_emg = []
         dataset_spect = []
 
-        file_pkl = pkl_to_pd("action-net/pickles/" + file)
+        file_pkl = pkl_to_pd("action_net/pickles/" + file)
         row = file_pkl.loc[index]
         first_frame = float(file_pkl.loc[0]["start"])
         record = generate_record(uid_offset, row, first_frame, 1, True)
@@ -422,7 +422,7 @@ def emg_analysis(folder):
 
 
 def rgb_action_net_creation(out_path=None, out_path_reduced=None, out_path_emg=None):
-    data = pkl_to_pd("action-net/pickles/S04_1.pkl")
+    data = pkl_to_pd("action_net/pickles/S04_1.pkl")
     uid_offset = 0
     first_frame = 0
     dataset_spect = []

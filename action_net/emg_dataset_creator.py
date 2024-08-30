@@ -8,7 +8,7 @@ import random as rand
 from scipy.signal import butter, filtfilt
 from sklearn.model_selection import train_test_split
 
-from spec_emg import compute_spectrogram
+from spec import compute_spectrogram
 
 def pkl_to_pd(pkl_file_path):
     with open(pkl_file_path, "rb") as pkl_file:
@@ -18,7 +18,7 @@ def pkl_to_pd(pkl_file_path):
 fps = 30
 clip_duration = 5
 
-dataset_folder = "action-net/action_net_dataset"
+dataset_folder = "action_net/action_net_dataset"
 
 data = None
 uid = 0
@@ -289,12 +289,11 @@ left_spectrograms = []
 right_spectrograms = []
 for i in range(len(data)):
     print(f'\r{i+1}/{len(data)}', end='', flush=True)
-    left_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_left_readings"]))
-    right_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_right_readings"]))
+    left_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_left_readings"], hop_length= 1))
+    right_spectrograms.append(compute_spectrogram(data.iloc[i]["myo_right_readings"], hop_length= 1))
 
 data['left_spectrogram'] = left_spectrograms
 data['right_spectrogram'] = right_spectrograms
-
 
 print(data.shape)
 print(data.columns)
@@ -319,9 +318,18 @@ with open('saved_features/actionEMG_train.pkl', 'wb') as out_file:
     pickle.dump(emg_train_data, out_file)
 
 emg_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
-print(emg_test_data.columns)
 with open('saved_features/actionEMG_test.pkl', 'wb') as out_file:
     pickle.dump(emg_test_data, out_file)
+
+spec_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'left_spectrogram', 'right_spectrogram']]
+with open('saved_features/actionEMGspec_train.pkl', 'wb') as out_file:
+    pickle.dump(spec_train_data, out_file)
+
+spec_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'narration', 'start_timestamp', 'stop_timestamp', 'left_spectrogram', 'right_spectrogram']]
+with open('saved_features/actionEMGspec_test.pkl', 'wb') as out_file:
+    pickle.dump(spec_test_data, out_file)
+
+
 
 
 #with open('saved_features/EMG_train', 'wb') as out_file:

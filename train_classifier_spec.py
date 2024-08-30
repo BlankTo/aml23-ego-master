@@ -4,7 +4,7 @@ from utils.logger import logger, clean_false_log
 import torch.nn.parallel
 import torch.optim
 import torch
-from utils.loaders import ActionNetDataset
+from utils.loaders import ActionNetSpectrogramDataset
 from utils.args import args
 from utils.utils import pformat_dict
 import utils
@@ -20,9 +20,7 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-emg_models = ["LSTM_emg", "LSTM_emg_base"]
-temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2"]
-other_models = ["MLP_single_clip"]
+spec_models = ["CNN"]
 
 
 def init_operations():
@@ -63,32 +61,8 @@ def main():
         #models[m] = getattr(model_list, args.models[m].model)()
 
         match args.models[m].model:
-            case "MLP_single_clip":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "MLP_flatten":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
-            case "LSTM":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "LSTM_emg":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "LSTM_emg_base":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "AttentionClassifier":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "MemoryAugmentedNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "CombinedModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].mlp_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "DualStreamNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "HierarchicalModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "TemporalConvNet":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
-            case "TemporalFusionTransformer":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "TemporalConvNet_2":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
+            case "CNN":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].channels, args.models[m].image_shape, num_classes)
 
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
@@ -105,13 +79,13 @@ def main():
         # notice, here it is multiplied by tot_batch/batch_size since gradient accumulation technique is adopted
         training_iterations = args.train.num_iter * (args.total_batch // args.batch_size)
         # all dataloaders are generated here
-        train_loader = torch.utils.data.DataLoader(ActionNetDataset(modalities,
+        train_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
                                                                        'train', args.dataset,
                                                                        None, load_feat= True),
                                                    batch_size=args.batch_size, shuffle=True,
                                                    num_workers=args.dataset.workers, pin_memory=True, drop_last=True)
 
-        val_loader = torch.utils.data.DataLoader(ActionNetDataset(modalities,
+        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
                                                                      'val', args.dataset,
                                                                      None, load_feat= True),
                                                  batch_size=args.batch_size, shuffle=False,
@@ -121,7 +95,7 @@ def main():
     elif args.action == "validate":
         if args.resume_from is not None:
             action_classifier.load_last_model(args.resume_from)
-        val_loader = torch.utils.data.DataLoader(ActionNetDataset(modalities,
+        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
                                                                      'val', args.dataset,
                                                                      None, load_feat=True),
                                                  batch_size=args.batch_size, shuffle=False,
@@ -178,7 +152,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
 
         ''' Action recognition'''
 
-        if model_name in temporal_dim_models:
+        if model_name in spec_models:
         
                 source_label = source_label.to(device)
                 data = {}
@@ -190,37 +164,9 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                 action_classifier.compute_loss(logits, source_label, loss_weight=1)
                 action_classifier.backward(retain_graph=False)
                 action_classifier.compute_accuracy(logits, source_label)
-
-        elif model_name in emg_models:
-        
-                source_label = source_label.to(device)
-                data = {}
-
-                for m in modalities:
-                    data[m] = source_data[m].to(device)
-
-                logits, _ = action_classifier.forward(data)
-                action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                action_classifier.backward(retain_graph=False)
-                action_classifier.compute_accuracy(logits, source_label)
-
-        elif model_name in other_models:
-
-                source_label = source_label.to(device)
-                data = {}
-
-                for clip in range(args.train.num_clips):
-                    # in case of multi-clip training one clip per time is processed
-                    for m in modalities:
-                        data[m] = source_data[m][:, clip].to(device)
-
-                    logits, _ = action_classifier.forward(data)
-                    action_classifier.compute_loss(logits, source_label, loss_weight=1)
-                    action_classifier.backward(retain_graph=False)
-                    action_classifier.compute_accuracy(logits, source_label)
 
         else:
-            print('model not prepared in train_classifier_emg')
+            print('model not prepared in train_classifier_spec')
             exit()
 
         ########
@@ -294,7 +240,7 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                 batch = data[m].shape[0]
                 #print(f'batch: {batch}')
 
-                if model_name in temporal_dim_models:
+                if model_name in spec_models:
                         
                         logits[m] = torch.zeros((batch, num_classes)).to(device)
 
@@ -303,35 +249,9 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                             #print(f"output_:{output[m].shape}")
                             for m in modalities:
                                 logits[m] = output[m]
-
-                elif model_name in emg_models:
-                        
-                        logits[m] = torch.zeros((batch, num_classes)).to(device)
-
-                        for m in modalities:
-                            output, _ = model(data)
-                            #print(f"output_:{output[m].shape}")
-                            for m in modalities:
-                                logits[m] = output[m]
-
-                elif model_name in other_models:
-                        
-                        logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
-
-                        clip = {}
-                        for i_c in range(args.test.num_clips):
-                            for m in modalities:
-                                clip[m] = data[m][:, i_c].to(device)
-
-                            output, _ = model(clip)
-                            for m in modalities:
-                                logits[m][i_c] = output[m]
-
-                        for m in modalities:
-                            logits[m] = torch.mean(logits[m], dim=0)
 
                 else:
-                    print('model not prepared in train_classifier_emg')
+                    print('model not prepared in train_classifier_spec')
                     exit()
 
             model.compute_accuracy(logits, label)

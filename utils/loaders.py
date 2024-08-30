@@ -8,11 +8,11 @@ import pandas as pd
 from PIL import Image
 import random as rand
 import torch.utils.data as data
-from scipy.signal import butter, filtfilt
 
 from utils.logger import logger
-from .emg_record import ActionEMGRecord
 from .epic_record import EpicVideoRecord
+from .emg_record import ActionEMGRecord
+from .spec_record import ActionEMGspecRecord
 
 
 class EpicKitchensDataset(data.Dataset, ABC):
@@ -382,3 +382,51 @@ class ActionNetDataset(data.Dataset, ABC):
 
     def __len__(self):
         return len(self.emg_list)
+
+class ActionNetSpectrogramDataset(data.Dataset, ABC):
+    def __init__(self, modalities, mode, dataset_conf,
+                 transform=None, load_feat=False, additional_info=False, **kwargs):
+
+        """
+        split: str (D1, D2 or D3)
+        modalities: list(str, str, ...)
+        mode: str (train, test/val)
+        dataset_conf must contain the following:
+            - annotations_path: str
+            - stride: int
+        dataset_conf[modality] for the modalities used must contain:
+            - data_path: str
+            - tmpl: str
+            - features_name: str (in case you are loading features for a predefined modality)
+            - (Event only) rgb4e: int
+        num_frames_per_clip: dict(modality: int)
+        num_clips: int
+        dense_sampling: dict(modality: bool)
+        additional_info: bool, set to True if you want to receive also the uid and the video name from the get function
+            notice, this may be useful to do some proper visualizations!
+        """
+        self.modalities = modalities  # considered modalities (ex. [RGB, Flow, Spec, Event])
+        self.mode = mode  # 'train', 'val' or 'test'
+        self.dataset_conf = dataset_conf
+        self.additional_info = additional_info
+
+        if self.mode == "train": spec_name = "actionEMGspec_train.pkl"
+        else: spec_name = "actionEMGspec_test.pkl"
+
+        self.list_file = pd.read_pickle(os.path.join('saved_features', spec_name))
+        logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")
+
+        self.spec_list = [ActionEMGspecRecord(self.list_file.iloc[i], self.dataset_conf) for i in range(len(self.list_file))]
+
+    def __getitem__(self, index):
+
+        record_spec = self.spec_list[index]
+        label_spec = record_spec.label
+        left_spectrogram = record_spec.left_spectrogram
+        right_spectrogram = record_spec.right_spectrogram
+        features_spec = torch.cat((left_spectrogram, right_spectrogram), dim=0)
+
+        return {"spec": features_spec}, torch.tensor(label_spec)
+
+    def __len__(self):
+        return len(self.spec_list)

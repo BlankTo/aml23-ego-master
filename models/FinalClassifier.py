@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import Transformer
 import itertools
+import torch.nn.functional as F
 
 class MLP_single_clip(nn.Module):
     def __init__(self, input_size, hidden_dim, num_classes):
@@ -87,12 +88,41 @@ class LSTM(nn.Module):
         self.num_layers = num_layers
     
     def forward(self, x):
-        print(x.shape)
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
         out, _ = self.lstm(x, (h_0, c_0))
         feat = out[:, -1, :]  # Take the output of the last time step
         out = self.fc(feat)
+        return out, {"features": feat}
+    
+class LSTM_emg_base(nn.Module):
+    def __init__(self, input_dim, num_classes):
+        super(LSTM_emg_base, self).__init__()
+        self.lstm_1 = nn.LSTM(input_dim, 100, 1, batch_first=True)
+        self.lstm_2 = nn.LSTM(100, 50, 1, batch_first=True)
+        self.dropout = nn.Dropout(0.2)
+        self.fc = nn.Linear(50, num_classes)
+    
+    def forward(self, x):
+        #print(x.shape)
+
+        h_0 = torch.zeros(1, x.size(0), 100).to(x.device)  # Initial hidden state
+        c_0 = torch.zeros(1, x.size(0), 100).to(x.device)  # Initial cell state
+        x, _ = self.lstm_1(x, (h_0, c_0))
+        #print(x.shape)
+
+        h_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial hidden state
+        c_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial cell state
+        out, _ = self.lstm_2(x, (h_1, c_1))
+        #print(out.shape)
+
+        feat = out[:, -1, :]  # Take the output of the last time step
+        #print(feat.shape)
+
+        feat = self.dropout(feat)
+
+        out = self.fc(feat)
+        #print(out.shape)
         return out, {"features": feat}
     
 class LSTM_emg(nn.Module):
@@ -347,9 +377,8 @@ class TemporalConvNet_2(nn.Module):
         return x, {'features': feat}
     
 class TRN(nn.Module):
-    def __init__(self, input_dim, temporal_dim, hidden_dim, num_classes, relation_type='pairwise'):
+    def __init__(self, input_dim, hidden_dim, num_classes, relation_type='pairwise'):
         super(TRN, self).__init__()
-        self.temporal_dim = temporal_dim
         self.channels = input_dim
         self.relation_type = relation_type
         
@@ -397,6 +426,33 @@ class TRN(nn.Module):
         logits = self.classifier(relations)
         
         return logits, {"features": relations}
+    
+class CNN(nn.Module):
+    def __init__(self, channels, image_shape, n_classes):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(channels, channels // 2, (2, 5))
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(channels // 2, channels // 4, 5)
+        #self.fc1 = nn.Linear((channels // 4) * 5 * 5, 128)
+        self.fc1 = nn.Linear(1472, 128)
+        self.fc2 = nn.Linear(128, 32)
+        self.fc3 = nn.Linear(32, n_classes)
+
+    def forward(self, x):
+        #print(f"1 -> {x.shape}")
+        x = self.pool(F.relu(self.conv1(x)))
+        #print(f"2 -> {x.shape}")
+        x = self.pool(F.relu(self.conv2(x)))
+        #print(f"3 -> {x.shape}")
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        #print(f"4 -> {x.shape}")
+        x = F.relu(self.fc1(x))
+        #print(f"5 -> {x.shape}")
+        feat = F.relu(self.fc2(x))
+        #print(f"6 -> {feat.shape}")
+        x = self.fc3(feat)
+        #print(f"7 -> {x.shape}")
+        return x, {"features": feat}
 
 class Classifier(nn.Module):
     def __init__(self, num_classes):
