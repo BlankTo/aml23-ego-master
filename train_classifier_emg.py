@@ -20,7 +20,7 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-emg_models = ["LSTM_emg", "LSTM_emg_base"]
+emg_models = ["LSTM_emg", "LSTM_emg_base", "LSTM_emg_base_base", "LSTM_emg_base_base_2"]
 temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2"]
 other_models = ["MLP_single_clip"]
 
@@ -49,7 +49,8 @@ def main():
 
     # recover valid paths, domains, classes
     # this will output the domain conversion (D1 -> 8, et cetera) and the label list
-    num_classes, valid_labels, source_domain, target_domain = utils.utils.get_domains_and_labels(args)
+    #num_classes, valid_labels, source_domain, target_domain = utils.utils.get_domains_and_labels(args)
+    num_classes = args.dataset.num_classes
     # device where everything is run
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -72,6 +73,10 @@ def main():
             case "LSTM_emg":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
             case "LSTM_emg_base":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "LSTM_emg_base_base":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "LSTM_emg_base_base_2":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
             case "AttentionClassifier":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)

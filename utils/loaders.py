@@ -97,10 +97,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         ## here the implementation
 
-        if modality == 'EMG':
-            print('look at get_train_indices')
-            exit()
-
         num_frames_per_clip = self.num_frames_per_clip[modality]
         num_clips = self.num_clips
         dense_stride = self.stride
@@ -252,6 +248,11 @@ class EpicKitchensDataset(data.Dataset, ABC):
             for m in self.modalities:
                 sample[m] = sample_row["features_" + m].values[0]
                 #print(':::::::::::::::::::::::::::::::::::::: self.LOAD_FEAT')
+
+            #print(record.verb_class)
+            #exit()
+            #ppp
+            
             if self.additional_info:
                 return sample, record.label, record.untrimmed_video_name, record.uid, len(sample[m])
             else:
@@ -269,9 +270,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 segment_indices[modality], central_frames = self._get_val_indices(record, modality)
 
         for m in self.modalities:
-            if m == 'EMG':
-                print('ddddddd toto m == EMG in getitem')
-                continue
             img, label = self.get(m, record, segment_indices[m])
             frames[m] = img
 
@@ -307,8 +305,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
     def _load_data(self, modality, record, idx):
         data_path = self.dataset_conf[modality].data_path
 
-        if modality != 'EMG':
-            tmpl = self.dataset_conf[modality].tmpl
+        tmpl = self.dataset_conf[modality].tmpl
 
         if modality == 'RGB' or modality == 'RGBDiff':
             # here the offset for the starting index of the sample is added
@@ -324,9 +321,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 else:
                     raise FileNotFoundError
             return [img]
-        
-        elif modality == 'EMG':
-            raise NotImplementedError("implement modality == EMG in load_data")
         
         else:
             raise NotImplementedError("Modality not implemented")

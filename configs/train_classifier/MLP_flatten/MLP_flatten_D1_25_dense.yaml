@@ -1,5 +1,5 @@
 action: train # train or test
-name: MLP_max_pooling_D1_25_dense # name of the experiment needed for the logs
+name: MLP_flatten_D1_25_dense # name of the experiment needed for the logs
 modality: ['RGB'] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
@@ -42,7 +42,7 @@ dataset:
 # these are the action recognition models for each modality
 models:
   RGB:
-    model: MLP_max_pooling
+    model: MLP_flatten
     normalize: False
     kwargs: {}
     lr_steps: 3000

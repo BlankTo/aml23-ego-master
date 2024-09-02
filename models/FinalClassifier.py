@@ -125,6 +125,60 @@ class LSTM_emg_base(nn.Module):
         #print(out.shape)
         return out, {"features": feat}
     
+class LSTM_emg_base_base(nn.Module):
+    def __init__(self, input_dim, num_classes):
+        super(LSTM_emg_base_base, self).__init__()
+        self.lstm_1 = nn.LSTM(input_dim, 5, 1, batch_first=True)
+        self.lstm_2 = nn.LSTM(5, 50, 1, batch_first=True)
+        self.dropout = nn.Dropout(0.2)
+        self.fc = nn.Linear(50, num_classes)
+    
+    def forward(self, x):
+        #print(x.shape)
+
+        h_0 = torch.zeros(1, x.size(0), 5).to(x.device)  # Initial hidden state
+        c_0 = torch.zeros(1, x.size(0), 5).to(x.device)  # Initial cell state
+        x, _ = self.lstm_1(x, (h_0, c_0))
+        #print(x.shape)
+
+        h_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial hidden state
+        c_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial cell state
+        out, _ = self.lstm_2(x, (h_1, c_1))
+        #print(out.shape)
+
+        feat = out[:, -1, :]  # Take the output of the last time step
+        #print(feat.shape)
+
+        feat = self.dropout(feat)
+
+        out = self.fc(feat)
+        #print(out.shape)
+        return out, {"features": feat}
+    
+class LSTM_emg_base_base_2(nn.Module):
+    def __init__(self, input_dim, num_classes):
+        super(LSTM_emg_base_base_2, self).__init__()
+        self.lstm_1 = nn.LSTM(input_dim, 50, 1, batch_first=True)
+        self.dropout = nn.Dropout(0.2)
+        self.fc = nn.Linear(50, num_classes)
+    
+    def forward(self, x):
+        #print(x.shape)
+
+        h = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial hidden state
+        c = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial cell state
+        out, _ = self.lstm_1(x, (h, c))
+        #print(out.shape)
+
+        feat = out[:, -1, :]  # Take the output of the last time step
+        #print(feat.shape)
+
+        feat = self.dropout(feat)
+
+        out = self.fc(feat)
+        #print(out.shape)
+        return out, {"features": feat}
+    
 class LSTM_emg(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
         super(LSTM_emg, self).__init__()
@@ -134,9 +188,9 @@ class LSTM_emg(nn.Module):
         self.num_layers = num_layers
     
     def forward(self, x):
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
-        out, _ = self.lstm(x, (h_0, c_0))
+        h = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
+        c = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
+        out, _ = self.lstm(x, (h, c))
         feat = out[:, -1, :]  # Take the output of the last time step
         out = self.fc(feat)
         return out, {"features": feat}
@@ -428,13 +482,32 @@ class TRN(nn.Module):
         
         return logits, {"features": relations}
     
+class CNN_base(nn.Module):
+    def __init__(self, num_classes):
+        super(CNN_base, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=16, out_channels=128, kernel_size=3)
+        self.conv2 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3)
+        self.pool = nn.MaxPool2d(kernel_size=2)
+        self.fc1 = nn.Linear(256*1*73, 128)
+        self.fc2 = nn.Linear(128, num_classes)
+        self.dropout = nn.Dropout(p=0.5)
+        
+    def forward(self, x):
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.pool(torch.relu(self.conv2(x)))
+        #print(x.shape)
+        feat = x.view(-1, 256*1*73 )
+        #print(x.shape)
+        x = self.dropout(torch.relu(self.fc1(feat)))
+        x = self.fc2(x)
+        return x, {"features": feat}
+    
 class CNN(nn.Module):
     def __init__(self, channels, image_shape, n_classes):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv2d(channels, channels // 2, (2, 5))
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(channels // 2, channels // 4, 5)
-        #self.fc1 = nn.Linear((channels // 4) * 5 * 5, 128)
         self.fc1 = nn.Linear(1472, 128)
         self.fc2 = nn.Linear(128, 32)
         self.fc3 = nn.Linear(32, n_classes)

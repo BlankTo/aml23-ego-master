@@ -66,6 +66,7 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
             record['myo_right_readings'] = row['myo_right_readings']
 
             sample_duration = int(record["stop_timestamp"] - record["start_timestamp"])
+
             if sample_duration < (clip_duration * 2):
 
                 ##
@@ -79,17 +80,17 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                     if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
                         left_readings.append(record["myo_left_readings"][i])
 
-                if len(left_readings) > 750:
-                    i = math.ceil(750 * 10 / len(left_readings))
-                    value = 750 * (10 / i)
+                if len(left_readings) > 100:
+                    i = math.ceil(100 * 10 / len(left_readings))
+                    value = 100 * (10 / i)
                     r_cp = []
                     for k in range(0, int(value), 10):
                         r_cp.extend(left_readings[k : k + i])
-                    r_cp = r_cp[:750]
+                    r_cp = r_cp[:100]
                     left_readings = np.array(r_cp)
 
-                elif len(left_readings) < 750:
-                    new_rows = np.zeros((750 - len(left_readings), 8))
+                elif len(left_readings) < 100:
+                    new_rows = np.zeros((100 - len(left_readings), 8))
                     left_readings = np.concatenate((left_readings, new_rows), axis=0)
 
                 left_readings_rectified = np.abs(left_readings)
@@ -127,17 +128,17 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                     if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
                         right_readings.append(record["myo_right_readings"][i])
 
-                if len(right_readings) > 750:
-                    i = math.ceil(750 * 10 / len(right_readings))
-                    value = 750 * (10 / i)
+                if len(right_readings) > 100:
+                    i = math.ceil(100 * 10 / len(right_readings))
+                    value = 100 * (10 / i)
                     r_cp = []
                     for k in range(0, int(value), 10):
                         r_cp.extend(right_readings[k : k + i])
-                    r_cp = r_cp[:750]
+                    r_cp = r_cp[:100]
                     right_readings = np.array(r_cp)
 
-                elif len(right_readings) < 750:
-                    new_rows = np.zeros((750 - len(right_readings), 8))
+                elif len(right_readings) < 100:
+                    new_rows = np.zeros((100 - len(right_readings), 8))
                     right_readings = np.concatenate((right_readings, new_rows), axis=0)
 
                 right_readings_rectified = np.abs(right_readings)
@@ -195,17 +196,17 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                         if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
                             left_readings.append(record["myo_left_readings"][i])
 
-                    if len(left_readings) > 750:
-                        i = math.ceil(750 * 10 / len(left_readings))
-                        value = 750 * (10 / i)
+                    if len(left_readings) > 100:
+                        i = math.ceil(100 * 10 / len(left_readings))
+                        value = 100 * (10 / i)
                         r_cp = []
                         for k in range(0, int(value), 10):
                             r_cp.extend(left_readings[k : k + i])
-                        r_cp = r_cp[:750]
+                        r_cp = r_cp[:100]
                         left_readings = np.array(r_cp)
 
-                    elif len(left_readings) < 750:
-                        new_rows = np.zeros((750 - len(left_readings), 8))
+                    elif len(left_readings) < 100:
+                        new_rows = np.zeros((100 - len(left_readings), 8))
                         left_readings = np.concatenate((left_readings, new_rows), axis=0)
 
                     left_readings_rectified = np.abs(left_readings)
@@ -236,17 +237,17 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                         if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
                             right_readings.append(record["myo_right_readings"][i])
 
-                    if len(right_readings) > 750:
-                        i = math.ceil(750 * 10 / len(right_readings))
-                        value = 750 * (10 / i)
+                    if len(right_readings) > 100:
+                        i = math.ceil(100 * 10 / len(right_readings))
+                        value = 100 * (10 / i)
                         r_cp = []
                         for k in range(0, int(value), 10):
                             r_cp.extend(right_readings[k : k + i])
-                        r_cp = r_cp[:750]
+                        r_cp = r_cp[:100]
                         right_readings = np.array(r_cp)
 
-                    elif len(right_readings) < 750:
-                        new_rows = np.zeros((750 - len(right_readings), 8))
+                    elif len(right_readings) < 100:
+                        new_rows = np.zeros((100 - len(right_readings), 8))
                         right_readings = np.concatenate((right_readings, new_rows), axis=0)
 
                     right_readings_rectified = np.abs(right_readings)
