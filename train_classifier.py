@@ -92,13 +92,13 @@ def main():
         training_iterations = args.train.num_iter * (args.total_batch // args.batch_size)
         # all dataloaders are generated here
         train_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[0], modalities,
-                                                                       'train', args.dataset, None, None, None,
+                                                                       'train', args.dataset, args.train.num_frames_per_clip[m], args.train.num_clips, args.train.dense_sampling[m],
                                                                        None, load_feat= True),
                                                    batch_size=args.batch_size, shuffle=True,
                                                    num_workers=args.dataset.workers, pin_memory=True, drop_last=True)
 
         val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, None, None, None,
+                                                                     'val', args.dataset, args.test.num_frames_per_clip[m], args.train.num_clips, args.test.dense_sampling[m],
                                                                      None, load_feat= True),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
@@ -108,7 +108,7 @@ def main():
         if args.resume_from is not None:
             action_classifier.load_last_model(args.resume_from)
         val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, None, None, None,
+                                                                     'val', args.dataset, args.test.num_frames_per_clip[m], args.train.num_clips, args.test.dense_sampling[m],
                                                                      None, load_feat=True),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
