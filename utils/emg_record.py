@@ -18,6 +18,6 @@ class ActionEMGRecord(object):
     @property
     def label(self):
         try:
-            if self.dataset_conf.label_type == 'action': return self._series['action_label']
+            if self.dataset_conf.label_type == 'action': return self._series['action_label'] # to load narratives as labels
         except: pass
         return self._series['label']

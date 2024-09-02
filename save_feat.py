@@ -93,12 +93,12 @@ def save_feat(model, loader, device, it, num_classes):
     global modalities
 
     model.reset_acc()
-    model.train(False)
+    model.train(False) # model in evaluation mode
     results_dict = {"features": [], "central_frames": []}
     num_samples = 0
     logits = {}
     features = {}
-    # Iterate over the models
+    # Iterate over the loader
     with torch.no_grad():
         for i_val, (data, label, video_name, uid, central_frames) in enumerate(loader):
             label = label.to(device)
@@ -116,7 +116,7 @@ def save_feat(model, loader, device, it, num_classes):
                 for m in modalities:
                     clip[m] = data[m][i_c].to(device)
 
-                output, feat = model(clip)
+                output, feat = model(clip) # passing clips to the model one at the time and retrieving the features of the last stage
                 feat = feat["features"]
                 for m in modalities:
                     logits[m][i_c] = output[m]
@@ -128,14 +128,11 @@ def save_feat(model, loader, device, it, num_classes):
                 for m in modalities:
                     sample["features_" + m] = features[m][:, i].cpu().detach().numpy()
                 results_dict["features"].append(sample)
-                #print(len(video_name))
-                #print(video_name)
-                #print(len(central_frames))
-                #print(central_frames)
+                # added central frame to each clip for later visualization
                 results_dict["central_frames"].append(f"ek_data/frames/{video_name[i]}/{video_name[i]}/img_{str(central_frames[i].item()).zfill(10)}.jpg")
             num_samples += batch
 
-            model.compute_accuracy(logits, label)
+            model.compute_accuracy(logits, label) # compute accuracy for baseline model (last stag, after features retrieval)
 
             if (i_val + 1) % (len(loader) // 5) == 0:
                 logger.info("[{}/{}] top1= {:.3f}% top5 = {:.3f}%".format(i_val + 1, len(loader),

@@ -158,7 +158,7 @@ class LSTM_emg_base_base(nn.Module):
 class LSTM_emg_base_base_2(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(LSTM_emg_base_base_2, self).__init__()
-        self.lstm_1 = nn.LSTM(input_dim, 50, 1, batch_first=True)
+        self.lstm = nn.LSTM(input_dim, 50, 1, batch_first=True)
         self.dropout = nn.Dropout(0.2)
         self.fc = nn.Linear(50, num_classes)
     
@@ -167,7 +167,7 @@ class LSTM_emg_base_base_2(nn.Module):
 
         h = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial hidden state
         c = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial cell state
-        out, _ = self.lstm_1(x, (h, c))
+        out, _ = self.lstm(x, (h, c))
         #print(out.shape)
 
         feat = out[:, -1, :]  # Take the output of the last time step

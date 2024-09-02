@@ -316,27 +316,27 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
     train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
     rgb_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
-    with open(f'train_val/action_{clip_duration}s_RGB_train.pkl', 'wb') as out_file:
+    with open(f'train_val/action_{clip_duration}s_100_RGB_train.pkl', 'wb') as out_file:
         pickle.dump(rgb_train_data, out_file)
 
     rgb_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
-    with open(f'train_val/action_{clip_duration}s_RGB_test.pkl', 'wb') as out_file:
+    with open(f'train_val/action_{clip_duration}s_100_RGB_test.pkl', 'wb') as out_file:
         pickle.dump(rgb_test_data, out_file)
 
     emg_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
-    with open(f'saved_features/action_{clip_duration}s_EMG_train.pkl', 'wb') as out_file:
+    with open(f'saved_features/action_{clip_duration}s_100_EMG_train.pkl', 'wb') as out_file:
         pickle.dump(emg_train_data, out_file)
 
     emg_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
-    with open(f'saved_features/action_{clip_duration}s_EMG_test.pkl', 'wb') as out_file:
+    with open(f'saved_features/action_{clip_duration}s_100_EMG_test.pkl', 'wb') as out_file:
         pickle.dump(emg_test_data, out_file)
 
     spec_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'left_spectrogram', 'right_spectrogram']]
-    with open(f'saved_features/action_{clip_duration}s_EMGspec_train.pkl', 'wb') as out_file:
+    with open(f'saved_features/action_{clip_duration}s_100_EMGspec_train.pkl', 'wb') as out_file:
         pickle.dump(spec_train_data, out_file)
 
     spec_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'left_spectrogram', 'right_spectrogram']]
-    with open(f'saved_features/action_{clip_duration}s_EMGspec_test.pkl', 'wb') as out_file:
+    with open(f'saved_features/action_{clip_duration}s_100_EMGspec_test.pkl', 'wb') as out_file:
         pickle.dump(spec_test_data, out_file)
 
 

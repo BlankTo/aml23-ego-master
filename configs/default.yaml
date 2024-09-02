@@ -35,7 +35,6 @@ dataset:
   RGB:
     data_path: ek_data/frames # path to RGB data
     tmpl: "img_{:010d}.jpg" # format of RGB filenames
-    features_name: ???
   Event: # not neeeded for the project
     rgb4e: 6
 

@@ -54,25 +54,25 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
         self.list_file = pd.read_pickle(os.path.join(self.dataset_conf.annotations_path, pickle_name))
         logger.info(f"Dataloader for {split}-{self.mode} with {len(self.list_file)} samples generated")
-        #for i, file in self.list_file.iterrows():
-        #    if file['stop_frame'] - file['start_frame'] < 50:
-        #        print((file['uid'], file['stop_frame'] - file['start_frame']))
-        #exit()
+
         self.video_list = [EpicVideoRecord(tup, self.dataset_conf) for tup in self.list_file.iterrows()]
         self.transform = transform  # pipeline of transforms
         self.load_feat = load_feat
 
         if self.load_feat:
+            logger.info(f"loading features")
             self.model_features = None
             for m in self.modalities:
                 # load features for each modality
-                model_features = pd.DataFrame(pd.read_pickle(os.path.join("saved_features", f"{self.dataset_conf[m].features_name}_{pickle_name}"))['features'])[["uid", "features_" + m]]                
+                model_features = pd.DataFrame(pd.read_pickle(os.path.join("saved_features", f"RGB_{num_frames_per_clip}_{'dense' if self.dense_sampling else 'uniform'}_{pickle_name}"))['features'])[["uid", "features_" + m]]                
                 if self.model_features is None:
                     self.model_features = model_features
                 else:
                     self.model_features = pd.merge(self.model_features, model_features, how="inner", on="uid")
 
             self.model_features = pd.merge(self.model_features, self.list_file, how="inner", on="uid")
+        
+        else: print('no load feat')
 
         logger.info('-------------------------------------------------------------------------------')
         
@@ -121,25 +121,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 for _ in range(num_clips):
                     clips_start.append(0)
                 clips_start = np.array(clips_start)
-
-                #for _ in range(num_clips):
-                #    for _ in range(num_frames_per_clip):
-                #        indices.append(0)
-                #    central_frames.append(0)
-                #return indices, central_frames
-
-            #if duration < num_frames_per_clip * dense_stride + num_clips:
-            #    dense_stride = 1
-            #    if duration < num_frames_per_clip * dense_stride + num_clips:
-            #        return np.zeros(num_frames_per_clip * num_clips, dtype= int), np.zeros(num_clips, dtype= int)
-            #        raise ValueError("video too short")
-
-            #print('here')
-            #print(duration)
-            #print((num_frames_per_clip, dense_stride, ( num_frames_per_clip * dense_stride )))
-            #print((0, duration - ( num_frames_per_clip * dense_stride ), num_clips))
-            #clips_start = np.array(rand.sample(range(0, duration - ( num_frames_per_clip * dense_stride )), num_clips), dtype= int)
-            #clips_start.sort()
             
             for clip_start in clips_start:
                 frame_id = clip_start
@@ -175,7 +156,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
         #print('get_val_indices')
 
         ##################################################################
-        # TODO: implement sampling for testing mode                      #
+        # DONE: implement sampling for testing mode                      #
         # Give the record and the modality, this function should return  #
         # a list of integers representing the frames to be selected from #
         # the video clip.                                                #
@@ -288,7 +269,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 error = False
                 try:
                     frame = self._load_data(modality, record, p)
-                except FileNotFoundError as e:
+                except FileNotFoundError as e: # some frames are missing in the datasets, skipping to next frame
                     #print(f'error in get - {(record.uid, p, record.num_frames[modality])}')
                     if not last:
                         if p == record.num_frames[modality]:
@@ -308,9 +289,10 @@ class EpicKitchensDataset(data.Dataset, ABC):
         tmpl = self.dataset_conf[modality].tmpl
 
         if modality == 'RGB' or modality == 'RGBDiff':
-            # here the offset for the starting index of the sample is added
 
+            # here the offset for the starting index of the sample is added
             idx_untrimmed = record.start_frame + idx
+
             try:
                 img = Image.open(os.path.join(data_path, record.untrimmed_video_name, record.untrimmed_video_name, tmpl.format(idx_untrimmed))).convert('RGB')
             except FileNotFoundError:
@@ -329,12 +311,9 @@ class EpicKitchensDataset(data.Dataset, ABC):
         return len(self.video_list)
 
 class ActionNetDataset(data.Dataset, ABC):
-    def __init__(self, modalities, mode, dataset_conf,
-                 transform=None, load_feat=False, additional_info=False, **kwargs):
+    def __init__(self, mode, dataset_conf, **kwargs):
 
         """
-        split: str (D1, D2 or D3)
-        modalities: list(str, str, ...)
         mode: str (train, test/val)
         dataset_conf must contain the following:
             - annotations_path: str
@@ -344,21 +323,14 @@ class ActionNetDataset(data.Dataset, ABC):
             - tmpl: str
             - features_name: str (in case you are loading features for a predefined modality)
             - (Event only) rgb4e: int
-        num_frames_per_clip: dict(modality: int)
-        num_clips: int
-        dense_sampling: dict(modality: bool)
-        additional_info: bool, set to True if you want to receive also the uid and the video name from the get function
-            notice, this may be useful to do some proper visualizations!
         """
-        self.modalities = modalities  # considered modalities (ex. [RGB, Flow, Spec, Event])
+
         self.mode = mode  # 'train', 'val' or 'test'
         self.dataset_conf = dataset_conf
-        self.additional_info = additional_info
 
         if self.mode == "train": emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_train.pkl"
         else: emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_test.pkl"
 
-        #self.video_list = pd.read_pickle(os.path.join('train_val', rgb_name))
         self.list_file = pd.read_pickle(os.path.join('saved_features', emg_name))
         logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")
 
@@ -367,23 +339,16 @@ class ActionNetDataset(data.Dataset, ABC):
     def __getitem__(self, index):
 
         record_emg = self.emg_list[index]
-        label_emg = record_emg.label
-        left_readings = record_emg.myo_left_readings
-        right_readings = record_emg.myo_right_readings
-        features_emg = torch.cat((left_readings, right_readings), dim=1)
-
-        return {"EMG": features_emg}, torch.tensor(label_emg)
+        return {"EMG": torch.cat((record_emg.myo_left_readings, record_emg.myo_right_readings), dim= 1)}, torch.tensor(record_emg.label)
 
     def __len__(self):
         return len(self.emg_list)
+    
 
 class ActionNetSpectrogramDataset(data.Dataset, ABC):
-    def __init__(self, modalities, mode, dataset_conf,
-                 transform=None, load_feat=False, additional_info=False, **kwargs):
+    def __init__(self, mode, dataset_conf, **kwargs):
 
         """
-        split: str (D1, D2 or D3)
-        modalities: list(str, str, ...)
         mode: str (train, test/val)
         dataset_conf must contain the following:
             - annotations_path: str
@@ -393,16 +358,9 @@ class ActionNetSpectrogramDataset(data.Dataset, ABC):
             - tmpl: str
             - features_name: str (in case you are loading features for a predefined modality)
             - (Event only) rgb4e: int
-        num_frames_per_clip: dict(modality: int)
-        num_clips: int
-        dense_sampling: dict(modality: bool)
-        additional_info: bool, set to True if you want to receive also the uid and the video name from the get function
-            notice, this may be useful to do some proper visualizations!
         """
-        self.modalities = modalities  # considered modalities (ex. [RGB, Flow, Spec, Event])
         self.mode = mode  # 'train', 'val' or 'test'
         self.dataset_conf = dataset_conf
-        self.additional_info = additional_info
 
         if self.mode == "train": spec_name = f"action_{dataset_conf.emg_clip_duration}s_EMGspec_train.pkl"
         else: spec_name = f"action_{dataset_conf.emg_clip_duration}s_EMGspec_test.pkl"
@@ -415,12 +373,7 @@ class ActionNetSpectrogramDataset(data.Dataset, ABC):
     def __getitem__(self, index):
 
         record_spec = self.spec_list[index]
-        label_spec = record_spec.label
-        left_spectrogram = record_spec.left_spectrogram
-        right_spectrogram = record_spec.right_spectrogram
-        features_spec = torch.cat((left_spectrogram, right_spectrogram), dim=0)
-
-        return {"spec": features_spec}, torch.tensor(label_spec)
+        return {"spec": torch.cat((record_spec.left_spectrogram, record_spec.right_spectrogram), dim=0)}, torch.tensor(record_spec.label)
 
     def __len__(self):
         return len(self.spec_list)

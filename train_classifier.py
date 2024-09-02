@@ -20,8 +20,8 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2", "MLP_avg_pooling", "MLP_max_pooling", "TRN", "LSTM_other"]
-other_models = ["MLP_single_clip", "LSTM_other_single_clip"]
+temporal_dim_models = ["MLP_avg_pooling", "MLP_max_pooling", "MLP_flatten", "LSTM", "TRN"]
+other_models = ["MLP_single_clip"]
 
 
 def init_operations():
@@ -64,36 +64,16 @@ def main():
         match args.models[m].model:
             case "MLP_single_clip":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "MLP_flatten":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
-            case "LSTM":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "AttentionClassifier":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "MemoryAugmentedNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "CombinedModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].mlp_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "DualStreamNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "HierarchicalModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "TemporalConvNet":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
-            case "TemporalFusionTransformer":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "TemporalConvNet_2":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
             case "MLP_avg_pooling":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
             case "MLP_max_pooling":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+            case "MLP_flatten":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
+            case "LSTM":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
             case "TRN":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "LSTM_other":
-                models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
-            case "LSTM_other_single_clip":
-                models[m] = getattr(model_list, args.models[m].model)(num_classes, args.batch_size)
 
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
@@ -104,6 +84,7 @@ def main():
     if args.action == "train":
         # resume_from argument is adopted in case of restoring from a checkpoint
         if args.resume_from is not None:
+            logger.info(f'resuming from {args.resume_from}')
             action_classifier.load_last_model(args.resume_from)
         # define number of iterations I'll do with the actual batch: we do not reason with epochs but with iterations
         # i.e. number of batches passed
@@ -183,7 +164,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
 
         ''' Action recognition'''
 
-        if model_name in temporal_dim_models:
+        if model_name in temporal_dim_models: # feeding all clips toghether as a temporal dimension
         
                 source_label = source_label.to(device)
                 data = {}
@@ -196,7 +177,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                 action_classifier.backward(retain_graph=False)
                 action_classifier.compute_accuracy(logits, source_label)
 
-        elif model_name in other_models:
+        elif model_name in other_models: # feeding one clip at the time
 
                 source_label = source_label.to(device)
                 data = {}
@@ -214,25 +195,6 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
         else:
             print('model not prepared in train_classifier')
             exit()
-
-        ########
-
-#        ''' Action recognition'''
-#        
-#        source_label = source_label.to(device)
-#        data = {}
-#
-#        for clip in range(args.train.num_clips):
-#            # in case of multi-clip training one clip per time is processed
-#            for m in modalities:
-#                data[m] = source_data[m][:, clip].to(device)
-#
-#            logits, _ = action_classifier.forward(data)
-#            action_classifier.compute_loss(logits, source_label, loss_weight=1)
-#            action_classifier.backward(retain_graph=False)
-#            action_classifier.compute_accuracy(logits, source_label)
-
-        #########
 
         # update weights and zero gradients if total_batch samples are passed
         if gradient_accumulation_step:
@@ -287,17 +249,16 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                 batch = data[m].shape[0]
                 #print(f'batch: {batch}')
 
-                if model_name in temporal_dim_models:
+                if model_name in temporal_dim_models: # feeding all clips toghether as a temporal dimension
                         
                         logits[m] = torch.zeros((batch, num_classes)).to(device)
 
                         for m in modalities:
                             output, _ = model(data)
-                            #print(f"output_:{output[m].shape}")
                             for m in modalities:
                                 logits[m] = output[m]
 
-                elif model_name in other_models:
+                elif model_name in other_models: # feeding one clip at the time
                         
                         logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
 

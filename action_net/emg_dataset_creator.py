@@ -35,7 +35,9 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
         for index, row in new_data.iterrows():
 
             record = {}
-            if row['description'] in relabel_dict.keys(): row['description'] = relabel_dict[row['description']]
+            if row['description'] in relabel_dict.keys(): row['description'] = relabel_dict[row['description']] # removing labiling errors
+
+            # creating verb_class
 
             des = row['description'].lower()
             if 'spread' in des: record['verb_class'] = 'Spread'
@@ -66,12 +68,13 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
             record['myo_right_readings'] = row['myo_right_readings']
 
             sample_duration = int(record["stop_timestamp"] - record["start_timestamp"])
-            if sample_duration < (clip_duration * 2):
 
-                ##
+            if sample_duration < (clip_duration * 2): # cannot be divided
 
                 record['uid'] = uid
                 uid += 1
+
+                # left readings
 
                 left_readings = []
                 for i in range(len(record["myo_left_timestamps"])):
@@ -112,14 +115,7 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
 
                 record["myo_left_readings"] = normalized_left_readings
 
-                ##
-
-                #right_readings = []
-                #for i in range(len(record["myo_right_timestamps"])):
-                #    ts = record["myo_right_timestamps"][i]
-                #    if int(ts) >= int(record["start_timestamp"]) and int(ts) <= int(record["stop_timestamp"]):
-                #        right_readings.append(record["myo_right_readings"][i])
-                #clip["myo_right_readings"] = right_readings
+                # right readings
 
                 right_readings = []
                 for i in range(len(record["myo_right_timestamps"])):
@@ -163,7 +159,9 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                 ##
 
                 records = [record]
-            else:
+
+            else: # dividing sample in clip_duration clips
+
                 records = []
                 clip_start = 0
                 while clip_start + clip_duration < sample_duration:
@@ -187,7 +185,7 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                     if clip_start + clip_duration < sample_duration:
                         clip['stop_timestamp'] = record['stop_timestamp']
 
-                    ##
+                    # left readings
 
                     left_readings = []
                     for i in range(len(record["myo_left_timestamps"])):
@@ -228,7 +226,7 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
 
                     clip["myo_left_readings"] = normalized_left_readings
 
-                    ##
+                    # right readings
 
                     right_readings = []
                     for i in range(len(record["myo_right_timestamps"])):
@@ -278,6 +276,8 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
             else:
                 data = pd.concat([data, pd.DataFrame(records)], ignore_index=True)
 
+    # enumerating verb classes
+
     label_set = set(data['verb_class'].to_list())
     label_dict = {lab: i for i, lab in enumerate(label_set)}
     print(label_dict)
@@ -285,6 +285,8 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
     for _, row in data.iterrows():
         labels.append(label_dict[row['verb_class']])
     data['label'] = labels
+
+    # enumerating verbs
 
     verb_set = set(data['verb'].to_list())
     verb_dict = {lab: i for i, lab in enumerate(verb_set)}
@@ -294,6 +296,8 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
         verbs.append(verb_dict[row['verb']])
     data['verb_label'] = verbs
 
+    # enumerating narrations (actions)
+
     action_set = set(data['narration'].to_list())
     action_dict = {lab: i for i, lab in enumerate(action_set)}
     print(action_dict)
@@ -301,6 +305,8 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
     for _, row in data.iterrows():
         actions.append(action_dict[row['narration']])
     data['action_label'] = actions
+
+    # computing spectrograms from myo readings
 
     left_spectrograms = []
     right_spectrograms = []
@@ -312,7 +318,11 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
     data['left_spectrogram'] = left_spectrograms
     data['right_spectrogram'] = right_spectrograms
 
+    # dividing train and test split
+
     train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
+
+    # saving RGB to train_val
 
     rgb_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
     with open(f'train_val/action_{clip_duration}s_RGB_train.pkl', 'wb') as out_file:
@@ -321,6 +331,8 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
     rgb_test_data = test_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'start_frame', 'stop_frame']]
     with open(f'train_val/action_{clip_duration}s_RGB_test.pkl', 'wb') as out_file:
         pickle.dump(rgb_test_data, out_file)
+
+    # saving emg and spec to saved_features
 
     emg_train_data = train_data[['uid', 'verb', 'verb_class', 'label', 'action_label', 'verb_label', 'narration', 'start_timestamp', 'stop_timestamp', 'myo_left_timestamps', 'myo_left_readings', 'myo_right_timestamps', 'myo_right_readings']]
     with open(f'saved_features/action_{clip_duration}s_EMG_train.pkl', 'wb') as out_file:
@@ -341,12 +353,10 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
 
 ###################
 
-dataset_folder = "action_net/action_net_dataset"
+if __name__ == '__main__':
 
-#######
+    dataset_folder = "action_net/action_net_dataset"
 
-create_emg_datasets(dataset_folder, clip_duration= 5)
+    create_emg_datasets(dataset_folder, clip_duration= 5)
 
-#######
-
-create_emg_datasets(dataset_folder, clip_duration= 10)
+    create_emg_datasets(dataset_folder, clip_duration= 10)

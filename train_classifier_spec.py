@@ -80,25 +80,20 @@ def main():
         # notice, here it is multiplied by tot_batch/batch_size since gradient accumulation technique is adopted
         training_iterations = args.train.num_iter * (args.total_batch // args.batch_size)
         # all dataloaders are generated here
-        train_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
-                                                                       'train', args.dataset,
-                                                                       None, load_feat= True),
+        train_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset('train', args.dataset),
                                                    batch_size=args.batch_size, shuffle=True,
                                                    num_workers=args.dataset.workers, pin_memory=True, drop_last=True)
 
-        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
-                                                                     'val', args.dataset,
-                                                                     None, load_feat= True),
+        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset('val', args.dataset),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
+        
         train(action_classifier, train_loader, val_loader, device, num_classes, args.models[m].model)
 
     elif args.action == "validate":
         if args.resume_from is not None:
             action_classifier.load_last_model(args.resume_from)
-        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset(modalities,
-                                                                     'val', args.dataset,
-                                                                     None, load_feat=True),
+        val_loader = torch.utils.data.DataLoader(ActionNetSpectrogramDataset('val', args.dataset),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
 
