@@ -9,6 +9,4 @@ from models.FinalClassifier import \
     TRN, \
     LSTM_emg_base_base, \
     LSTM_emg_base_base_2, \
-    LSTM_emg_base, \
-    LSTM_emg, \
     CNN

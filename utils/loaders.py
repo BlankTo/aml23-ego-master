@@ -229,11 +229,6 @@ class EpicKitchensDataset(data.Dataset, ABC):
             for m in self.modalities:
                 sample[m] = sample_row["features_" + m].values[0]
                 #print(':::::::::::::::::::::::::::::::::::::: self.LOAD_FEAT')
-
-            print(record.verb_class)
-            print(record.narration)
-            exit()
-            #ppp
             
             if self.additional_info:
                 return sample, record.label, record.untrimmed_video_name, record.uid, len(sample[m])

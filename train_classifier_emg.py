@@ -20,9 +20,9 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-emg_models = ["LSTM_emg", "LSTM_emg_base", "LSTM_emg_base_base", "LSTM_emg_base_base_2"]
-temporal_dim_models = ["MLP_flatten", "LSTM", "AttentionClassifier", "MemoryAugmentedNetwork", "CombinedModel", "DualStreamNetwork", "HierarchicalModel", "TemporalConvNet", "TemporalFusionTransformer", "TemporalConvNet_2"]
-other_models = ["MLP_single_clip"]
+temporal_dim_models = []
+emg_models = ["LSTM", "LSTM_emg_base_base", "LSTM_emg_base_base_2"]
+other_models = []
 
 
 def init_operations():
@@ -64,37 +64,13 @@ def main():
         #models[m] = getattr(model_list, args.models[m].model)()
 
         match args.models[m].model:
-            case "MLP_single_clip":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "MLP_flatten":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
             case "LSTM":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "LSTM_emg":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "LSTM_emg_base":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
             case "LSTM_emg_base_base":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
             case "LSTM_emg_base_base_2":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "AttentionClassifier":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "MemoryAugmentedNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "CombinedModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].mlp_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "DualStreamNetwork":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "HierarchicalModel":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "TemporalConvNet":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
-            case "TemporalFusionTransformer":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
-            case "TemporalConvNet_2":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].num_channels, num_classes)
-
+            
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
                                                 args.total_batch, args.models_dir, num_classes,

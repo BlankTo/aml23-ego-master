@@ -117,35 +117,6 @@ class LSTM(nn.Module):
         out = self.fc(feat)
         return out, {"features": feat}
     
-class LSTM_emg_base(nn.Module):
-    def __init__(self, input_dim, num_classes):
-        super(LSTM_emg_base, self).__init__()
-        self.lstm_1 = nn.LSTM(input_dim, 100, 1, batch_first=True)
-        self.lstm_2 = nn.LSTM(100, 50, 1, batch_first=True)
-        self.dropout = nn.Dropout(0.2)
-        self.fc = nn.Linear(50, num_classes)
-    
-    def forward(self, x):
-        #print(x.shape)
-
-        h_0 = torch.zeros(1, x.size(0), 100).to(x.device)  # Initial hidden state
-        c_0 = torch.zeros(1, x.size(0), 100).to(x.device)  # Initial cell state
-        x, _ = self.lstm_1(x, (h_0, c_0))
-        #print(x.shape)
-
-        h_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial hidden state
-        c_1 = torch.zeros(1, x.size(0), 50).to(x.device)  # Initial cell state
-        out, _ = self.lstm_2(x, (h_1, c_1))
-        #print(out.shape)
-
-        feat = out[:, -1, :]  # Take the output of the last time step
-        #print(feat.shape)
-
-        feat = self.dropout(feat)
-
-        out = self.fc(feat)
-        #print(out.shape)
-        return out, {"features": feat}
     
 class LSTM_emg_base_base(nn.Module):
     def __init__(self, input_dim, num_classes):
@@ -199,22 +170,6 @@ class LSTM_emg_base_base_2(nn.Module):
 
         out = self.fc(feat)
         #print(out.shape)
-        return out, {"features": feat}
-    
-class LSTM_emg(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
-        super(LSTM_emg, self).__init__()
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, num_classes)
-        self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
-    
-    def forward(self, x):
-        h = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial hidden state
-        c = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)  # Initial cell state
-        out, _ = self.lstm(x, (h, c))
-        feat = out[:, -1, :]  # Take the output of the last time step
-        out = self.fc(feat)
         return out, {"features": feat}
     
 class TemporalConvNet(nn.Module):
