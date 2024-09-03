@@ -1,6 +1,6 @@
 action: train # train or test
-name: LSTM_5s_emg_base_base_action # name of the experiment needed for the logs
-modality: ['EMG'] # modality used
+name: MLP_SimpleTempConv_D1_25_uniform # name of the experiment needed for the logs
+modality: ['RGB'] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
 gpus: null # gpus adopted
@@ -15,16 +15,16 @@ train:
   eval_freq: 50 # evaluation frequency
   num_clips: 1 # clips adopted in training
   dense_sampling: # sampling version adopted in training for each modality
-    RGB: True
+    RGB: False
   num_frames_per_clip: # number of frames adopted in training for each modality
-    RGB: 5
+    RGB: 25
 
 test:
   num_clips: 5 # number of clips in testing
   dense_sampling: # sampling version adopted in test for each modality
-    RGB: True
+    RGB: False
   num_frames_per_clip: # number of frames adopted in test for each modality
-    RGB: 5
+    RGB: 25
 
 dataset:
   annotations_path: train_val # path for the annotations data
@@ -35,21 +35,18 @@ dataset:
   RGB:
     data_path: ek_data/frames # path to RGB data
     tmpl: "img_{:010d}.jpg" # format of RGB filenames
-    features_name: RGB_5_dense
+    features_name: RGB_25_uniform
   Event: # not neeeded for the project
     rgb4e: 6
-  emg_clip_duration: 5
-  num_classes: 21
-  label_type: 'action'
 
 # these are the action recognition models for each modality
 models:
-  EMG:
-    model: LSTM_emg_base_base
+  RGB:
+    model: MLP_SimpleTempConv
     normalize: False
     kwargs: {}
     lr_steps: 3000
     lr: 0.01
     sgd_momentum: 0.9
     weight_decay: 1e-7
-    input_dim: 16
+    input_dim: 1024

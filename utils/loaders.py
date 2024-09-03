@@ -230,8 +230,9 @@ class EpicKitchensDataset(data.Dataset, ABC):
                 sample[m] = sample_row["features_" + m].values[0]
                 #print(':::::::::::::::::::::::::::::::::::::: self.LOAD_FEAT')
 
-            #print(record.verb_class)
-            #exit()
+            print(record.verb_class)
+            print(record.narration)
+            exit()
             #ppp
             
             if self.additional_info:

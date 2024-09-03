@@ -69,7 +69,9 @@ def main():
             case "MLP_max_pooling":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
             case "MLP_flatten":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.save.num_frames_per_clip[m], args.models[m].hidden_dim, num_classes)
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
+            case "MLP_SimpleTempConv":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, num_classes)
             case "LSTM":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
             case "TRN":

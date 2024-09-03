@@ -78,6 +78,28 @@ class MLP_max_pooling(nn.Module):
         x = x.squeeze(-1)       # Remove the temporal dimension
         x = self.mlp(x)         # Pass through MLP
         return x, {"features": {}}
+
+
+class MLP_SimpleTempCov(nn.Module):
+    def __init__(self, input_dim, temporal_dim, n_classes):
+        super(MLP_SimpleTempCov, self).__init__()
+        
+        self.temporal_conv = nn.Conv1d(in_channels= input_dim, out_channels= input_dim, kernel_size= temporal_dim)
+        
+        self.fc = nn.Linear(input_dim, n_classes)
+    
+    def forward(self, x):
+        print(x.shape)
+        x = x.transpose(1, 2)
+        print(x.shape)
+        x = self.temporal_conv(x)
+        print(x.shape)
+        feat = x.view(x.size(0), -1)
+        x = self.fc(feat)
+        print(x.shape)
+        
+        return x, {'features': feat}
+
     
 class LSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
@@ -194,145 +216,6 @@ class LSTM_emg(nn.Module):
         feat = out[:, -1, :]  # Take the output of the last time step
         out = self.fc(feat)
         return out, {"features": feat}
-
-    
-class LSTM_other_single_clip(nn.Module):
-    def __init__(self, num_classes, batch_size): #* aggiusta i parametri, ad es. passa la batch come arg
-        super(LSTM_other_single_clip, self).__init__()
-        self.input_size = 1024
-        self.lstm_hidden_size = 512
-        self.num_layers = 2
-        self.batch_size = batch_size
-        self.lstm = nn.LSTM(self.input_size, self.lstm_hidden_size, self.num_layers, 
-                            bias=True, batch_first=True, dropout=0.5, bidirectional=False, 
-                            proj_size=0, device=None, dtype=None)
-        self.fc = nn.Linear(self.lstm_hidden_size, num_classes)
-
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
-        x = x.unsqueeze(1)
-        out, _ = self.lstm(x, (h0, c0))
-        feat = out.view(-1, self.lstm_hidden_size)
-        logits = self.fc(feat)
-
-        return logits, {"features": feat}
-    
-class LSTM_other(nn.Module):
-    def __init__(self, num_classes, batch_size): #* aggiusta i parametri, ad es. passa la batch come arg
-        super(LSTM_other, self).__init__()
-        self.input_size = 1024
-        self.lstm_hidden_size = 512
-        self.num_layers = 2
-        self.batch_size = batch_size
-        self.lstm = nn.LSTM(self.input_size, self.lstm_hidden_size, self.num_layers, 
-                            bias=True, batch_first=True, dropout=0.5, bidirectional=False, 
-                            proj_size=0, device=None, dtype=None)
-        self.fc = nn.Linear(self.lstm_hidden_size, num_classes)
-
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.lstm_hidden_size).to(x.device)
-        out, _ = self.lstm(x, (h0, c0))
-        feat = out = out[:, -1, :]
-        logits = self.fc(feat)
-
-        return logits, {"features": feat}
-    
-class AttentionLayer(nn.Module):
-    def __init__(self, input_dim):
-        super(AttentionLayer, self).__init__()
-        self.W = nn.Linear(input_dim, input_dim)
-        self.v = nn.Linear(input_dim, 1, bias=False)
-    
-    def forward(self, x):
-        scores = self.v(torch.tanh(self.W(x)))
-        weights = torch.softmax(scores, dim=1)
-        weighted_sum = torch.sum(weights * x, dim=1)
-        return weighted_sum
-
-class AttentionClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes):
-        super(AttentionClassifier, self).__init__()
-        self.attention = AttentionLayer(input_dim)
-        self.fc = nn.Linear(input_dim, num_classes)
-    
-    def forward(self, x):
-        feat = self.attention(x)
-        x = self.fc(feat)
-        return x, {'features': feat}
-    
-class MemoryAugmentedNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_classes):
-        super(MemoryAugmentedNetwork, self).__init__()
-        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
-        self.memory = nn.Linear(hidden_dim, hidden_dim)
-        self.fc = nn.Linear(hidden_dim, num_classes)
-    
-    def forward(self, x):
-        # x shape: (batch_size, clip_in_sample, features_per_clip)
-        out, _ = self.lstm(x)
-        memory = self.memory(out[:, -1, :])
-        out = self.fc(memory)
-        return out, {'features': memory}
-    
-class CombinedModel(nn.Module):
-    def __init__(self, input_dim, mlp_dim, hidden_dim, num_layers, num_classes):
-        super(CombinedModel, self).__init__()
-        self.mlp = nn.Sequential(
-            nn.Linear(input_dim, mlp_dim),
-            nn.ReLU()
-        )
-        self.lstm = nn.LSTM(mlp_dim, hidden_dim, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, num_classes)
-        self.hidden_dim = hidden_dim
-    
-    def forward(self, x):
-        batch_size, seq_len, _ = x.size()
-        x = x.view(-1, x.size(-1))  # Reshape to (batch_size*seq_len, input_dim)
-        x = self.mlp(x)
-        x = x.view(batch_size, seq_len, -1)  # Reshape back to (batch_size, seq_len, mlp_dim)
-        h_0 = torch.zeros(1, x.size(0), self.hidden_dim).to(x.device)
-        c_0 = torch.zeros(1, x.size(0), self.hidden_dim).to(x.device)
-        out, _ = self.lstm(x, (h_0, c_0))
-        feat = out[:, -1, :]
-        out = self.fc(feat)
-        return out, {'features': feat}
-    
-class DualStreamNetwork(nn.Module):
-    def __init__(self, input_dim, num_classes):
-        super(DualStreamNetwork, self).__init__()
-        self.stream1 = nn.Sequential(
-            nn.Linear(input_dim, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256)
-        )
-        self.stream2 = nn.LSTM(input_dim, 256, batch_first=True)
-        self.fc = nn.Linear(512, num_classes)
-    
-    def forward(self, x):
-        # x shape: (batch_size, clip_in_sample, features_per_clip)
-        x_stream1 = self.stream1(x.mean(dim=1))  # Static features
-        x_stream2, _ = self.stream2(x)  # Temporal features
-        x_stream2 = x_stream2[:, -1, :]  # Take the last time step output
-        feat = torch.cat([x_stream1, x_stream2], dim=1)  # Concatenate features from both streams
-        x = self.fc(feat)
-        return x, {'feautures': feat}
-    
-class HierarchicalModel(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_classes):
-        super(HierarchicalModel, self).__init__()
-        self.lstm_clip = nn.LSTM(input_dim, hidden_dim, batch_first=True)
-        self.lstm_video = nn.LSTM(hidden_dim, hidden_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, num_classes)
-    
-    def forward(self, x):
-        # x shape: (batch_size, clip_in_sample, features_per_clip)
-        clip_features, _ = self.lstm_clip(x)  # Process each clip
-        video_features, _ = self.lstm_video(clip_features)  # Process sequence of clips
-        video_features = video_features[:, -1, :]  # Take the output of the last time step
-        x = self.fc(video_features)
-        return x, {'features': video_features}
     
 class TemporalConvNet(nn.Module):
     def __init__(self, input_dim, num_channels, num_classes, kernel_size=2, dropout=0.2):

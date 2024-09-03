@@ -247,6 +247,7 @@ def create_emg_datasets(dataset_folder, clip_duration= 5, fps= 30):
                         right_readings = np.array(r_cp)
 
                     elif len(right_readings) < 100:
+                        if False: continue #ppp
                         new_rows = np.zeros((100 - len(right_readings), 8))
                         right_readings = np.concatenate((right_readings, new_rows), axis=0)
 
