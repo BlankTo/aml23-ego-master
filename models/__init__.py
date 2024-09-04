@@ -5,8 +5,11 @@ from models.FinalClassifier import \
     MLP_avg_pooling, \
     MLP_max_pooling, \
     MLP_flatten, \
+    MLP_SimpleTempConv, \
     LSTM, \
     TRN, \
     LSTM_emg_base_base, \
     LSTM_emg_base_base_2, \
-    CNN
+    CNN, \
+    CNN_base, \
+    CNN_SingleConv

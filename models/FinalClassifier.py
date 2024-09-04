@@ -80,23 +80,18 @@ class MLP_max_pooling(nn.Module):
         return x, {"features": {}}
 
 
-class MLP_SimpleTempCov(nn.Module):
+class MLP_SimpleTempConv(nn.Module):
     def __init__(self, input_dim, temporal_dim, n_classes):
-        super(MLP_SimpleTempCov, self).__init__()
+        super(MLP_SimpleTempConv, self).__init__()
         
-        self.temporal_conv = nn.Conv1d(in_channels= input_dim, out_channels= input_dim, kernel_size= temporal_dim)
+        self.temporal_conv = nn.Conv1d(in_channels= temporal_dim, out_channels= 1, kernel_size= 1)
         
         self.fc = nn.Linear(input_dim, n_classes)
     
     def forward(self, x):
-        print(x.shape)
-        x = x.transpose(1, 2)
-        print(x.shape)
         x = self.temporal_conv(x)
-        print(x.shape)
         feat = x.view(x.size(0), -1)
         x = self.fc(feat)
-        print(x.shape)
         
         return x, {'features': feat}
 
@@ -321,23 +316,29 @@ class TRN(nn.Module):
         return logits, {"features": relations}
     
 class CNN_base(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, channels, image_shape, n_classes):
         super(CNN_base, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=16, out_channels=128, kernel_size=3)
-        self.conv2 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3)
-        self.pool = nn.MaxPool2d(kernel_size=2)
-        self.fc1 = nn.Linear(256*1*73, 128)
-        self.fc2 = nn.Linear(128, num_classes)
-        self.dropout = nn.Dropout(p=0.5)
-        
+        self.conv1 = nn.Conv2d(channels, channels // 2, 3)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(channels // 2, channels // 4, 3)
+        self.fc1 = nn.Linear(1488, 128)
+        self.fc2 = nn.Linear(128, 32)
+        self.fc3 = nn.Linear(32, n_classes)
+
     def forward(self, x):
-        x = self.pool(torch.relu(self.conv1(x)))
-        x = self.pool(torch.relu(self.conv2(x)))
-        #print(x.shape)
-        feat = x.view(-1, 256*1*73 )
-        #print(x.shape)
-        x = self.dropout(torch.relu(self.fc1(feat)))
-        x = self.fc2(x)
+        #print(f"1 -> {x.shape}")
+        x = self.pool(F.relu(self.conv1(x)))
+        #print(f"2 -> {x.shape}")
+        x = self.pool(F.relu(self.conv2(x)))
+        #print(f"3 -> {x.shape}")
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        #print(f"4 -> {x.shape}")
+        x = F.relu(self.fc1(x))
+        #print(f"5 -> {x.shape}")
+        feat = F.relu(self.fc2(x))
+        #print(f"6 -> {feat.shape}")
+        x = self.fc3(feat)
+        #print(f"7 -> {x.shape}")
         return x, {"features": feat}
     
 class CNN(nn.Module):
@@ -358,6 +359,30 @@ class CNN(nn.Module):
         #print(f"3 -> {x.shape}")
         x = torch.flatten(x, 1) # flatten all dimensions except batch
         #print(f"4 -> {x.shape}")
+        x = F.relu(self.fc1(x))
+        #print(f"5 -> {x.shape}")
+        feat = F.relu(self.fc2(x))
+        #print(f"6 -> {feat.shape}")
+        x = self.fc3(feat)
+        #print(f"7 -> {x.shape}")
+        return x, {"features": feat}
+    
+class CNN_SingleConv(nn.Module):
+    def __init__(self, channels, image_shape, n_classes):
+        super(CNN_SingleConv, self).__init__()
+        self.conv = nn.Conv2d(channels, channels // 4, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(8952, 128)
+        self.fc2 = nn.Linear(128, 32)
+        self.fc3 = nn.Linear(32, n_classes)
+
+    def forward(self, x):
+        #print(f"1 -> {x.shape}")
+        x = self.pool(F.relu(self.conv(x)))
+        #print(f"3 -> {x.shape}")
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        #print(f"4 -> {x.shape}")
+        #exit()
         x = F.relu(self.fc1(x))
         #print(f"5 -> {x.shape}")
         feat = F.relu(self.fc2(x))

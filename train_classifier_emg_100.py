@@ -4,7 +4,7 @@ from utils.logger import logger, clean_false_log
 import torch.nn.parallel
 import torch.optim
 import torch
-from utils.loaders import EpicKitchensDataset
+from utils.loaders import ActionNetDataset_100
 from utils.args import args
 from utils.utils import pformat_dict
 import utils
@@ -20,8 +20,9 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-temporal_dim_models = ["MLP_avg_pooling", "MLP_max_pooling", "MLP_flatten", "LSTM", "TRN", "MLP_SimpleTempConv"]
-other_models = ["MLP_single_clip"]
+temporal_dim_models = []
+emg_models = ["LSTM", "LSTM_emg_base_base", "LSTM_emg_base_base_2"]
+other_models = []
 
 
 def init_operations():
@@ -48,7 +49,8 @@ def main():
 
     # recover valid paths, domains, classes
     # this will output the domain conversion (D1 -> 8, et cetera) and the label list
-    num_classes, valid_labels, source_domain, target_domain = utils.utils.get_domains_and_labels(args)
+    #num_classes, valid_labels, source_domain, target_domain = utils.utils.get_domains_and_labels(args)
+    num_classes = args.dataset.num_classes
     # device where everything is run
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,21 +64,13 @@ def main():
         #models[m] = getattr(model_list, args.models[m].model)()
 
         match args.models[m].model:
-            case "MLP_single_clip":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-            case "MLP_avg_pooling":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
-            case "MLP_max_pooling":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
-            case "MLP_flatten":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, args.models[m].hidden_dim, num_classes)
-            case "MLP_SimpleTempConv":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.train.num_clips, num_classes)
             case "LSTM":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, args.models[m].num_layers, num_classes)
-            case "TRN":
-                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, args.models[m].hidden_dim, num_classes)
-
+            case "LSTM_emg_base_base":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            case "LSTM_emg_base_base_2":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].input_dim, num_classes)
+            
     # the models are wrapped into the ActionRecognition task which manages all the training steps
     action_classifier = tasks.ActionRecognition("action-classifier", models, args.batch_size,
                                                 args.total_batch, args.models_dir, num_classes,
@@ -86,32 +80,26 @@ def main():
     if args.action == "train":
         # resume_from argument is adopted in case of restoring from a checkpoint
         if args.resume_from is not None:
-            logger.info(f'resuming from {args.resume_from}')
             action_classifier.load_last_model(args.resume_from)
         # define number of iterations I'll do with the actual batch: we do not reason with epochs but with iterations
         # i.e. number of batches passed
         # notice, here it is multiplied by tot_batch/batch_size since gradient accumulation technique is adopted
         training_iterations = args.train.num_iter * (args.total_batch // args.batch_size)
         # all dataloaders are generated here
-        train_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[0], modalities,
-                                                                       'train', args.dataset, args.train.num_frames_per_clip[m], args.train.num_clips, args.train.dense_sampling[m],
-                                                                       None, load_feat= True),
+        train_loader = torch.utils.data.DataLoader(ActionNetDataset_100('train', args.dataset),
                                                    batch_size=args.batch_size, shuffle=True,
                                                    num_workers=args.dataset.workers, pin_memory=True, drop_last=True)
 
-        val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, args.test.num_frames_per_clip[m], args.train.num_clips, args.test.dense_sampling[m],
-                                                                     None, load_feat= True),
+        val_loader = torch.utils.data.DataLoader(ActionNetDataset_100('val', args.dataset),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
+
         train(action_classifier, train_loader, val_loader, device, num_classes, args.models[m].model)
 
     elif args.action == "validate":
         if args.resume_from is not None:
             action_classifier.load_last_model(args.resume_from)
-        val_loader = torch.utils.data.DataLoader(EpicKitchensDataset(args.dataset.shift.split("-")[-1], modalities,
-                                                                     'val', args.dataset, args.test.num_frames_per_clip[m], args.train.num_clips, args.test.dense_sampling[m],
-                                                                     None, load_feat=True),
+        val_loader = torch.utils.data.DataLoader(ActionNetDataset_100('val', args.dataset),
                                                  batch_size=args.batch_size, shuffle=False,
                                                  num_workers=args.dataset.workers, pin_memory=True, drop_last=False)
 
@@ -166,7 +154,7 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
 
         ''' Action recognition'''
 
-        if model_name in temporal_dim_models: # feeding all clips toghether as a temporal dimension
+        if model_name in temporal_dim_models:
         
                 source_label = source_label.to(device)
                 data = {}
@@ -179,7 +167,20 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                 action_classifier.backward(retain_graph=False)
                 action_classifier.compute_accuracy(logits, source_label)
 
-        elif model_name in other_models: # feeding one clip at the time
+        elif model_name in emg_models:
+        
+                source_label = source_label.to(device)
+                data = {}
+
+                for m in modalities:
+                    data[m] = source_data[m].to(device)
+
+                logits, _ = action_classifier.forward(data)
+                action_classifier.compute_loss(logits, source_label, loss_weight=1)
+                action_classifier.backward(retain_graph=False)
+                action_classifier.compute_accuracy(logits, source_label)
+
+        elif model_name in other_models:
 
                 source_label = source_label.to(device)
                 data = {}
@@ -195,8 +196,27 @@ def train(action_classifier, train_loader, val_loader, device, num_classes, mode
                     action_classifier.compute_accuracy(logits, source_label)
 
         else:
-            print('model not prepared in train_classifier')
+            print('model not prepared in train_classifier_emg')
             exit()
+
+        ########
+
+#        ''' Action recognition'''
+#        
+#        source_label = source_label.to(device)
+#        data = {}
+#
+#        for clip in range(args.train.num_clips):
+#            # in case of multi-clip training one clip per time is processed
+#            for m in modalities:
+#                data[m] = source_data[m][:, clip].to(device)
+#
+#            logits, _ = action_classifier.forward(data)
+#            action_classifier.compute_loss(logits, source_label, loss_weight=1)
+#            action_classifier.backward(retain_graph=False)
+#            action_classifier.compute_accuracy(logits, source_label)
+
+        #########
 
         # update weights and zero gradients if total_batch samples are passed
         if gradient_accumulation_step:
@@ -251,16 +271,27 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                 batch = data[m].shape[0]
                 #print(f'batch: {batch}')
 
-                if model_name in temporal_dim_models: # feeding all clips toghether as a temporal dimension
+                if model_name in temporal_dim_models:
                         
                         logits[m] = torch.zeros((batch, num_classes)).to(device)
 
                         for m in modalities:
                             output, _ = model(data)
+                            #print(f"output_:{output[m].shape}")
                             for m in modalities:
                                 logits[m] = output[m]
 
-                elif model_name in other_models: # feeding one clip at the time
+                elif model_name in emg_models:
+                        
+                        logits[m] = torch.zeros((batch, num_classes)).to(device)
+
+                        for m in modalities:
+                            output, _ = model(data)
+                            #print(f"output_:{output[m].shape}")
+                            for m in modalities:
+                                logits[m] = output[m]
+
+                elif model_name in other_models:
                         
                         logits[m] = torch.zeros((args.test.num_clips, batch, num_classes)).to(device)
 
@@ -277,7 +308,7 @@ def validate(model, val_loader, device, it, num_classes, model_name):
                             logits[m] = torch.mean(logits[m], dim=0)
 
                 else:
-                    print('model not prepared in train_classifier')
+                    print('model not prepared in train_classifier_emg')
                     exit()
 
             model.compute_accuracy(logits, label)
@@ -285,18 +316,31 @@ def validate(model, val_loader, device, it, num_classes, model_name):
             if (i_val + 1) % (len(val_loader) // 5) == 0:
                 logger.info("[{}/{}] top1= {:.3f}% top5 = {:.3f}%".format(i_val + 1, len(val_loader),
                                                                           model.accuracy.avg[1], model.accuracy.avg[5]))
-
-        class_accuracies = [(x / y) * 100 for x, y in zip(model.accuracy.correct, model.accuracy.total)]
+                
+        class_accuracies = [(x / y) * 100 if y != 0 else None for x, y in zip(model.accuracy.correct, model.accuracy.total)]
         logger.info('Final accuracy: top1 = %.2f%%\ttop5 = %.2f%%' % (model.accuracy.avg[1],
                                                                       model.accuracy.avg[5]))
         for i_class, class_acc in enumerate(class_accuracies):
-            logger.info('Class %d = [%d/%d] = %.2f%%' % (i_class,
-                                                         int(model.accuracy.correct[i_class]),
-                                                         int(model.accuracy.total[i_class]),
-                                                         class_acc))
+            if class_acc is not None:
+                logger.info('Class %d = [%d/%d] = %.2f%%' % (i_class,
+                                                            int(model.accuracy.correct[i_class]),
+                                                            int(model.accuracy.total[i_class]),
+                                                            class_acc))
+            else:
+                logger.info('Class %d = [%d/%d] = None' % (i_class,
+                                                            int(model.accuracy.correct[i_class]),
+                                                            int(model.accuracy.total[i_class])))
 
-    logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'
-                .format(np.array(class_accuracies).mean(axis=0)))
+
+    if None in class_accuracies:
+        summ = 0
+        count = 0
+        for i_class, class_acc in enumerate(class_accuracies):
+            if class_acc is not None:
+                summ += class_acc
+                count += 1
+        logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'.format(summ / count))
+    else: logger.info('Accuracy by averaging class accuracies (same weight for each class): {}%'.format(np.array(class_accuracies).mean(axis=0)))
     test_results = {'top1': model.accuracy.avg[1], 'top5': model.accuracy.avg[5],
                     'class_accuracies': np.array(class_accuracies)}
 

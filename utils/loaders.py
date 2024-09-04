@@ -145,7 +145,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
                 clip_indices = np.linspace(clip_start, clip_start + clip_len, num= num_frames_per_clip, dtype= int)
                 indices.extend(clip_indices)
-                central_frames.append(clip_indices[len(clip_indices) // 2])
+                central_frames.append(record.start_frame + clip_indices[len(clip_indices) // 2])
 
         return indices, central_frames
 
@@ -207,7 +207,7 @@ class EpicKitchensDataset(data.Dataset, ABC):
 
                 clip_indices = np.linspace(clip_start, clip_start + clip_len, num= num_frames_per_clip, dtype= int)
                 indices.extend(clip_indices)
-                central_frames.append(clip_indices[len(clip_indices) // 2])
+                central_frames.append(record.start_frame + clip_indices[len(clip_indices) // 2])
 
         return indices, central_frames
 
@@ -326,6 +326,40 @@ class ActionNetDataset(data.Dataset, ABC):
 
         if self.mode == "train": emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_train.pkl"
         else: emg_name = f"action_{dataset_conf.emg_clip_duration}s_EMG_test.pkl"
+
+        self.list_file = pd.read_pickle(os.path.join('saved_features', emg_name))
+        logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")
+
+        self.emg_list = [ActionEMGRecord(self.list_file.iloc[i], self.dataset_conf) for i in range(len(self.list_file))]
+
+    def __getitem__(self, index):
+
+        record_emg = self.emg_list[index]
+        return {"EMG": torch.cat((record_emg.myo_left_readings, record_emg.myo_right_readings), dim= 1)}, torch.tensor(record_emg.label)
+
+    def __len__(self):
+        return len(self.emg_list)
+    
+class ActionNetDataset_100(data.Dataset, ABC):
+    def __init__(self, mode, dataset_conf, **kwargs):
+
+        """
+        mode: str (train, test/val)
+        dataset_conf must contain the following:
+            - annotations_path: str
+            - stride: int
+        dataset_conf[modality] for the modalities used must contain:
+            - data_path: str
+            - tmpl: str
+            - features_name: str (in case you are loading features for a predefined modality)
+            - (Event only) rgb4e: int
+        """
+
+        self.mode = mode  # 'train', 'val' or 'test'
+        self.dataset_conf = dataset_conf
+
+        if self.mode == "train": emg_name = f"action_{dataset_conf.emg_clip_duration}s_100_EMG_train.pkl"
+        else: emg_name = f"action_{dataset_conf.emg_clip_duration}s_100_EMG_test.pkl"
 
         self.list_file = pd.read_pickle(os.path.join('saved_features', emg_name))
         logger.info(f"Dataloader for {self.mode} with {len(self.list_file)} samples generated")

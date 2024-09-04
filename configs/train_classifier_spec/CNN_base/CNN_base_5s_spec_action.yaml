@@ -1,5 +1,5 @@
 action: train # train or test
-name: CNN_10s_spec_action # name of the experiment needed for the logs
+name: CNN_base_5s_spec_action # name of the experiment needed for the logs
 modality: ['spec'] # modality used
 total_batch: 128 # total batch size if training is done with gradient accumulation
 batch_size: 32 # batch size for the forward
@@ -13,7 +13,7 @@ train:
   num_iter: 1000 # number of training iterations with total_batch size
   lr_steps: 3000 # steps before reducing learning rate
   eval_freq: 50 # evaluation frequency
-  num_clips: 1 # clips adopted in training
+  num_clips: 5 # clips adopted in training
   dense_sampling: # sampling version adopted in training for each modality
     RGB: True
   num_frames_per_clip: # number of frames adopted in training for each modality
@@ -38,14 +38,14 @@ dataset:
     features_name: RGB_5_dense
   Event: # not neeeded for the project
     rgb4e: 6
-  emg_clip_duration: 10
+  emg_clip_duration: 5
   label_type: 'action'
   num_classes: 21
 
 # these are the action recognition models for each modality
 models:
   spec:
-    model: CNN
+    model: CNN_base
     normalize: False
     kwargs: {}
     lr_steps: 3000

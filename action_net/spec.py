@@ -20,11 +20,7 @@ def compute_spectrogram(readings, n_fft= 32, win_length= None, hop_length= 4):
         normalized=True,
     )
 
-    signal = [[float(x) for x in record] for record in readings]
-    signal = torch.tensor(signal, dtype=torch.float32)
-    freq_signal = torch.stack([spectrogram(readings[:, j]) for j in range(8)])
-
-    return freq_signal
+    return torch.stack([spectrogram(readings[:, j]) for j in range(8)])
 
 def plot_spectrogram(specgram, title=None, ylabel="freq_bin", show= True):
     fig, axs = plt.subplots(len(specgram), 1, figsize=(16, 8))

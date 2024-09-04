@@ -20,7 +20,7 @@ modalities = None
 np.random.seed(13696641)
 torch.manual_seed(13696641)
 
-spec_models = ["CNN"]
+spec_models = ["CNN", "CNN_base", "CNN_SingleConv"]
 
 
 def init_operations():
@@ -63,6 +63,10 @@ def main():
 
         match args.models[m].model:
             case "CNN":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].channels, args.models[m].image_shape, num_classes)
+            case "CNN_base":
+                models[m] = getattr(model_list, args.models[m].model)(args.models[m].channels, args.models[m].image_shape, num_classes)
+            case "CNN_SingleConv":
                 models[m] = getattr(model_list, args.models[m].model)(args.models[m].channels, args.models[m].image_shape, num_classes)
 
     # the models are wrapped into the ActionRecognition task which manages all the training steps
